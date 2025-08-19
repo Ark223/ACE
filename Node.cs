@@ -3,7 +3,7 @@
 namespace Ace
 {
     /// <summary>
-    /// Represents a state tree for caching and retrieving nodes by infostate key.
+    /// Represents an info-state tree for caching and retrieving nodes by key.
     /// </summary>
     internal sealed class Tree
     {
@@ -61,7 +61,7 @@ namespace Ace
         private bool _leaf;
         private int _visits;
 
-        private readonly List<int> _tricks;
+        private readonly List<byte> _tricks;
         private readonly List<bool> _winnings;
         private readonly Dictionary<Card, Node> _children;
 
@@ -82,7 +82,7 @@ namespace Ace
         {
             this._children = new Dictionary<Card, Node>();
             this._winnings = new List<bool>();
-            this._tricks = new List<int>();
+            this._tricks = new List<byte>();
             this._leaf = false;
             this._visits = 0;
         }
@@ -122,7 +122,7 @@ namespace Ace
         /// </summary>
         /// <param name="win">True if this result is a win.</param>
         /// <param name="tricks">Number of tricks taken.</param>
-        internal void Insert(bool win, int tricks)
+        internal void Insert(bool win, byte tricks)
         {
             this._tricks.Add(tricks);
             this._winnings.Add(win);
