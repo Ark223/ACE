@@ -11,6 +11,11 @@ namespace Ace
         private readonly Dictionary<uint, Node> _states;
 
         /// <summary>
+        /// Returns true if the tree has no stored nodes.
+        /// </summary>
+        internal bool IsEmpty => this._states.Count == 0;
+
+        /// <summary>
         /// Gets the root node of the tree.
         /// </summary>
         internal Node Root => this._root;
@@ -163,10 +168,10 @@ namespace Ace
         /// </summary>
         /// <param name="win">True if this result is a win.</param>
         /// <param name="tricks">Number of tricks taken.</param>
-        internal void Insert(bool win, byte tricks)
+        internal void Insert(bool win, int tricks)
         {
             this._samples++;
-            this._tricks += tricks;
+            this._tricks += (uint)tricks;
             if (win) this._winnings++;
         }
 

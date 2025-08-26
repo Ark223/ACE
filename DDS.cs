@@ -20,9 +20,6 @@ namespace Ace
             internal static extern IntPtr bcalcDDS_new(string format, string hands, int strain, int leader);
 
             [DllImport("libcalcdds", CallingConvention = CallingConvention.Cdecl)]
-            internal static extern IntPtr bcalcDDS_clone(IntPtr solver);
-
-            [DllImport("libcalcdds", CallingConvention = CallingConvention.Cdecl)]
             internal static extern void bcalcDDS_delete(IntPtr solver);
 
             [DllImport("libcalcdds", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]

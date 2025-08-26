@@ -54,14 +54,16 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
-        /// Executes the internal search process with the specified options.
+        /// Resets search statistics, optionally clears the game tree.
         /// </summary>
-        /// <param name="time">Total search duration, in milliseconds.</param>
-        /// <param name="interval">Interval for periodic progress update.</param>
-        /// <param name="depth">Maximum search depth per simulation.</param>
-        private async Task Execute(uint time, uint interval, uint depth)
+        /// <param name="hard">Whether to clear the tree.</param>
+        private bool Reset(bool hard)
         {
-            // To Do!
+            this._iterations = 0;
+            this._elapsed = TimeSpan.Zero;
+            bool empty = this._tree.IsEmpty;
+            if (hard) this._tree = new Tree();
+            return !empty;
         }
 
         /// <summary>
@@ -107,6 +109,17 @@ namespace Ace
         }
 
         /// <summary>
+        /// Executes the internal search process with the specified options.
+        /// </summary>
+        /// <param name="time">Total search duration, in milliseconds.</param>
+        /// <param name="interval">Interval for periodic progress update.</param>
+        /// <param name="depth">Maximum search depth per simulation.</param>
+        private async Task Execute(uint time, uint interval, uint depth)
+        {
+            // To Do!
+        }
+
+        /// <summary>
         /// Runs simulations to build out the search tree in a loop until stopped.
         /// </summary>
         /// <param name="depth">Maximum depth for each search iteration.</param>
@@ -145,7 +158,7 @@ namespace Ace
             {
                 // Calculate results using leaf evaluator
                 var (win, tricks) = this.Evaluate(world);
-                node.Insert(win, (byte)tricks); return;
+                node.Insert(win, tricks); return;
             }
 
             // Get all legal moves from this state
@@ -200,9 +213,19 @@ namespace Ace
         /// <param name="depth">Maximum search depth per simulation.</param>
         public async Task Search(uint time, uint interval, uint depth = 3)
         {
-            this._tree = new Tree();
-            this._elapsed = TimeSpan.Zero;
-            Interlocked.Exchange(ref this._iterations, 0);
+            this.Reset(true);
+            await this.Execute(time, interval, depth).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Continues the main search process with the specified options.
+        /// </summary>
+        /// <param name="time">Total search duration, in milliseconds.</param>
+        /// <param name="interval">Interval for periodic progress update.</param>
+        /// <param name="depth">Maximum search depth per simulation.</param>
+        public async Task Continue(uint time, uint interval, uint depth = 3)
+        {
+            if (!this.Reset(false)) return; // Nothing to continue from
             await this.Execute(time, interval, depth).ConfigureAwait(false);
         }
 
