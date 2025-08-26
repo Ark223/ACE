@@ -280,7 +280,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ulong HiddenSet()
         {
-            return (~this.AllHeld()) & ((1UL << 52) - 1UL);
+            return (~this.AllHeld()) & ((1ul << 52) - 1ul);
         }
 
         /// <summary>
@@ -302,7 +302,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ulong SuitMask(Suit suit)
         {
-            return 0x1FFFUL << ((int)suit * 13); // 0x1FFF = 13 bits set to 1
+            return 0x1ffful << ((int)suit * 13); // 0x1fff = 13 bits set to 1
         }
 
         /// <summary>
@@ -370,7 +370,7 @@ namespace Ace
 
             // Compute bitmask of hidden cards of that suit
             ulong hidden = this._hidden & this.SuitMask(suit);
-            if (hidden == 0UL) return;
+            if (hidden == 0ul) return;
 
             // Find the non-leading player with any unknown cards
             var targets = Enumerable.Range(0, 4).Where<int>(seat =>
@@ -475,7 +475,7 @@ namespace Ace
             Suit lead = this.FirstLead(card);
 
             // Compute bitmask for played card
-            ulong bit = 1UL << card.Index();
+            ulong bit = 1ul << card.Index();
 
             // Save the snapshot of game state
             this._undo.Push(new History(this));
@@ -577,7 +577,7 @@ namespace Ace
         public bool IsLegal(in Card card)
         {
             // Compute bitmask for played card
-            ulong bit = 1UL << card.Index();
+            ulong bit = 1ul << card.Index();
 
             // Determine lead suit for the trick
             Suit lead = this.FirstLead(card);

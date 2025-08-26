@@ -43,7 +43,6 @@ namespace Ace
             var cards = new List<Card>(hand.Length);
             for (int idx = 0; idx < hand.Length; idx++)
             {
-                // Assign the card based on index
                 cards.Add(Game.Deck[hand[idx]]);
             }
             return cards;
@@ -58,7 +57,7 @@ namespace Ace
         {
             byte size = Utilities.PopCount(bitmask);
             List<byte> list = new List<byte>(size);
-            while (bitmask != 0UL)
+            while (bitmask != 0ul)
             {
                 // Extract each set bit and store its index
                 ulong bit = bitmask & (ulong)-(long)bitmask;
@@ -104,7 +103,7 @@ namespace Ace
             for (int i = 0; i < trick.Count; i++)
             {
                 ref Card card = ref trick.Cards[i];
-                ulong bit = 1UL << card.Index();
+                ulong bit = 1ul << card.Index();
 
                 // Restore card to player's hand
                 this._hands[(int)player] |= bit;

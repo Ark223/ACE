@@ -56,7 +56,7 @@ namespace Ace
                 return 64;
             }
             byte result = 0;
-            while ((value & 1UL) == 0)
+            while ((value & 1ul) == 0)
             {
                 result++;
                 value >>= 1;

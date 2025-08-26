@@ -19,8 +19,8 @@ namespace Ace
         private readonly List<Card>[] _hands;
         private readonly List<string> _history;
 
-        private uint _state_key = 0x811C9DC5U;
-        private readonly uint _prime = 0x01000193U;
+        private uint _state_key = 0x811c9dc5u;
+        private readonly uint _prime = 0x01000193u;
 
         /// <summary>
         /// Gets the current hands of all four players.
@@ -113,8 +113,8 @@ namespace Ace
         {
             for (int seat = 0; seat < 4; seat++)
             {
-                this._hands[seat].RemoveAll(card => 0UL !=
-                    ((1UL << card.Index()) & plays[seat]));
+                this._hands[seat].RemoveAll(card => 0ul !=
+                    ((1ul << card.Index()) & plays[seat]));
             }
         }
 

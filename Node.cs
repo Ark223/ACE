@@ -33,7 +33,7 @@ namespace Ace
         internal Node GetOrCreate(uint key, bool maximize)
         {
             // Return the initial info-state
-            if (key == 0U) return this._root;
+            if (key == 0u) return this._root;
 
             // Create a new node if this key does not exist
             if (!this._states.TryGetValue(key, out Node node))
@@ -81,7 +81,7 @@ namespace Ace
         {
             get
             {
-                if (this._samples == 0U) return 0d;
+                if (this._samples == 0u) return 0d;
                 return (double)this._tricks / this._samples;
             }
         }
@@ -93,7 +93,7 @@ namespace Ace
         {
             get
             {
-                if (this._samples == 0U) return 0d;
+                if (this._samples == 0u) return 0d;
                 return (double)this._winnings / this._samples;
             }
         }
@@ -155,7 +155,7 @@ namespace Ace
         internal uint GetEdgeVisits(in Card card)
         {
             return this._edge_visits.TryGetValue(
-                card, out uint count) ? count : 0U;
+                card, out uint count) ? count : 0u;
         }
 
         /// <summary>
@@ -208,7 +208,7 @@ namespace Ace
         /// <param name="card">Card played.</param>
         internal void Record(in Card card)
         {
-            if (!this._edge_visits.TryAdd(card, 1U))
+            if (!this._edge_visits.TryAdd(card, 1u))
             {
                 this._edge_visits[card]++;
             }

@@ -48,7 +48,7 @@ namespace Ace
         /// <param name="lambda">Blend between worst-case and average.</param>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
         /// <returns>An opponent model using the specified strategy.</returns>
-        public static Model Linear(double lambda, double prior = 1d)
+        public static Model LinearBlend(double lambda, double prior = 1d)
         {
             return new LinearBlendModel(lambda, prior);
         }

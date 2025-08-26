@@ -38,7 +38,7 @@ namespace Ace
         /// <returns>A 52-bit mask where each bit represents a card in the hand.</returns>
         private static ulong ParseHand(string hand)
         {
-            ulong mask = 0UL;
+            ulong mask = 0ul;
             if (string.IsNullOrEmpty(hand) || hand == "...")
             {
                 return mask;
@@ -48,7 +48,7 @@ namespace Ace
             {
                 foreach (char rank in suits[suit])
                 {
-                    mask |= 1UL << ((int)PbnOrder[suit] *
+                    mask |= 1ul << ((int)PbnOrder[suit] *
                         13 + Card.RankFromChar[rank] - 2);
                 }
             }
