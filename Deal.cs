@@ -33,11 +33,6 @@ namespace Ace
         internal Player Leader => this._leader;
 
         /// <summary>
-        /// Get the unique key representing deal state.
-        /// </summary>
-        internal uint StateKey => this._state_key;
-
-        /// <summary>
         /// Initializes a new <see cref="Deal"/> from full hands and current trick state.
         /// </summary>
         /// <param name="deal">List of four player hands representing the full deal.</param>

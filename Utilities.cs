@@ -3,7 +3,7 @@
 namespace Ace
 {
     /// <summary>
-    /// General-purpose utility functions for bridge logic and combinatorics.
+    /// General utility functions for combinatorics and bitwise operations.
     /// </summary>
     internal class Utilities
     {

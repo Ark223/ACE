@@ -81,7 +81,7 @@ namespace Ace
                 ulong assigned = this._hands[seat];
                 assigned |= this._plays[seat];
 
-                // Get all cards explicitly known
+                // Extract cards explicitly known
                 var known = this.Convert(assigned);
                 int count = known.Length;
 

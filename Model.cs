@@ -138,15 +138,15 @@ namespace Ace
         /// </summary>
         internal override double Backup(in Node node, in Score score)
         {
-            // Find the worst-case child value first
-            double worst = double.PositiveInfinity;
+            // Find the worst-case child value
+            double best = double.PositiveInfinity;
             foreach (Node child in node.Children.Values)
             {
                 double value = score(child);
-                if (value < worst) worst = value;
+                if (value < best) best = value;
             }
 
-            // Get expected score weighted by policy
+            // Compute expected score weighted by policy
             double lambda = this._lambda, result = 0d;
             foreach (var pair in node.Policy(this._prior))
             {
@@ -154,7 +154,7 @@ namespace Ace
             }
 
             // Blend both according to the lambda factor
-            return (1d - lambda) * worst + lambda * result;
+            return (1d - lambda) * best + lambda * result;
         }
     }
 
