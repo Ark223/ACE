@@ -292,7 +292,7 @@ namespace Ace
         }
 
         /// <summary>
-        /// 
+        /// Requests cancellation of any active search process.
         /// </summary>
         public void Cancel()
         {
