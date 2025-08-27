@@ -319,6 +319,7 @@ namespace Ace
         {
             lock (this._lock)
             {
+                if (this._tree.IsEmpty) return null;
                 return new ISS(this._tree, model).Solve();
             }
         }
