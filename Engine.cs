@@ -192,7 +192,7 @@ namespace Ace
                 // Include progress reporter into awaited tasks
                 workers.Add(progress);
 
-                // Wait for all search and progress tasks to finish
+                // Wait for all currently running tasks to finish
                 await Task.WhenAll(workers).ConfigureAwait(false);
             }
             catch (OperationCanceledException) {}
