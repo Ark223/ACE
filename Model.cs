@@ -181,7 +181,7 @@ namespace Ace
         /// </summary>
         internal override double Backup(in Node node, in Score score)
         {
-            double weighted = 0d;
+            double result = 0d;
             int count = node.Children.Count;
             var comps = new List<(double, double)>(count);
 
@@ -204,11 +204,11 @@ namespace Ace
             {
                 double temp = -value / this._tau;
                 double exp = Math.Exp(temp - scaled);
-                weighted += probability * exp;
+                result += probability * exp;
             }
 
             // Compute the final softmin formula and return
-            return -this._tau * (Math.Log(weighted) + scaled);
+            return -this._tau * (Math.Log(result) + scaled);
         }
     }
 }

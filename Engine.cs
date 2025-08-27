@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,6 +23,10 @@ namespace Ace
         private readonly int _threads;
         private readonly object _lock;
 
+        private CancellationTokenSource _cts;
+        public event Action ProgressChanged;
+        public event Action SearchCompleted;
+
         /// <summary>
         /// Gets the total elapsed time spent performing the search operation.
         /// </summary>
@@ -37,9 +43,9 @@ namespace Ace
         /// <param name="threads">Number of the search threads.</param>
         public Engine(int threads)
         {
-            this._threads = threads;
             this._lock = new object();
             this._elapsed = TimeSpan.Zero;
+            this._threads = Math.Max(1, threads);
         }
 
         /// <summary>
@@ -56,6 +62,34 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="action"></param>
+        private void RaiseEvent(Action action)
+        {
+            if (action == null) return;
+            var context = SynchronizationContext.Current;
+            if (context != null) context.Post(_ => action(), null);
+            else action();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void RaiseProgress()
+        {
+            this.ProgressChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void RaiseCompleted()
+        {
+            this.SearchCompleted?.Invoke();
+        }
+
+        /// <summary>
         /// Resets search statistics, optionally clears the game tree.
         /// </summary>
         /// <param name="depth">Search depth per simulation.</param>
@@ -70,7 +104,10 @@ namespace Ace
             if (hard) this._tree = new Tree();
             return !empty;
         }
+    }
 
+    public sealed partial class Engine
+    {
         /// <summary>
         /// Evaluates whether the investigated partnership can achieve their objective:<br></br>
         /// either making the contract (declarer's side) or setting the contract (defenders).<br></br>
@@ -120,7 +157,53 @@ namespace Ace
         /// <param name="interval">Interval for periodic progress update.</param>
         private async Task Execute(uint duration, uint interval)
         {
-            // To Do!
+            // Ensure sensible minimum values
+            interval = Math.Max(250u, interval);
+            duration = Math.Max(250u, duration);
+            if (interval > duration) interval = duration;
+
+            // Set up a token that triggers after duration
+            var time = TimeSpan.FromMilliseconds(duration);
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            this._cts = new CancellationTokenSource();
+            this._cts.CancelAfter(time);
+
+            // Start workers for running simulations
+            CancellationToken token = this._cts.Token;
+            List<Task> workers = new List<Task>(this._threads);
+            for (int thread = 0; thread < this._threads; thread++)
+                workers.Add(Task.Run(() => Simulate(token), token));
+
+            // Start periodic progress reporting
+            var progress = Task.Run(async () =>
+            {
+                try
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        // Wait for the next progress update interval
+                        var delay = Task.Delay((int)interval, token);
+                        await delay.ConfigureAwait(false);
+                        this._elapsed = stopwatch.Elapsed;
+                        this.RaiseEvent(this.ProgressChanged);
+                    }
+                }
+                catch {}
+            }, token);
+
+            // Wait for search threads to finish (may exit early if cancelled)
+            try { await Task.WhenAll(workers).ConfigureAwait(false); } catch {}
+
+            // Stop the progress loop immediately if it’s still running
+            if (!this._cts.IsCancellationRequested) this._cts.Cancel();
+            try { await progress.ConfigureAwait(false); } catch {}
+
+            // Finalize with results and clean up
+            this._elapsed = stopwatch.Elapsed;
+            this.RaiseEvent(this.ProgressChanged);
+            this.RaiseEvent(this.SearchCompleted);
+            this._cts.Dispose();
+            stopwatch.Stop();
         }
 
         /// <summary>
@@ -151,7 +234,7 @@ namespace Ace
         /// <param name="node">Current info-state node for the search.</param>
         /// <param name="world">Current deal (world state) to evaluate.</param>
         /// <param name="depth">Search depth still remaining.</param>
-        private void Query(Node node, ref Deal world, int depth)
+        private void Query(Node node, ref Deal world, uint depth)
         {
             // Increment visits
             node.AddVisit();
@@ -209,15 +292,11 @@ namespace Ace
         }
 
         /// <summary>
-        /// Executes the main search process with the specified options.
+        /// 
         /// </summary>
-        /// <param name="duration">Total search duration, in milliseconds.</param>
-        /// <param name="interval">Interval for periodic progress update.</param>
-        /// <param name="depth">Maximum search depth per simulation.</param>
-        public async Task Search(uint duration, uint interval, uint depth)
+        public void Cancel()
         {
-            this.Reset(Math.Min(depth, 3), true);
-            await this.Execute(duration, interval).ConfigureAwait(false);
+            this._cts?.Cancel();
         }
 
         /// <summary>
@@ -228,6 +307,18 @@ namespace Ace
         public async Task Continue(uint duration, uint interval)
         {
             if (!this.Reset(this._depth, false)) return;
+            await this.Execute(duration, interval).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Executes the main search process with the specified options.
+        /// </summary>
+        /// <param name="duration">Total search duration, in milliseconds.</param>
+        /// <param name="interval">Interval for periodic progress update.</param>
+        /// <param name="depth">Maximum search depth per simulation.</param>
+        public async Task Search(uint duration, uint interval, uint depth)
+        {
+            this.Reset(Math.Min(depth, 3), true);
             await this.Execute(duration, interval).ConfigureAwait(false);
         }
 
