@@ -14,8 +14,10 @@ namespace Ace
         private Game _game;
         private Tree _tree;
         private Sampler _sampler;
-        private TimeSpan _elapsed;
+
+        private uint _depth;
         private long _iterations;
+        private TimeSpan _elapsed;
         private readonly int _threads;
         private readonly object _lock;
 
@@ -56,11 +58,14 @@ namespace Ace
         /// <summary>
         /// Resets search statistics, optionally clears the game tree.
         /// </summary>
+        /// <param name="depth">Search depth per simulation.</param>
         /// <param name="hard">Whether to clear the tree.</param>
-        private bool Reset(bool hard)
+        private bool Reset(uint depth, bool hard)
         {
-            this._iterations = 0;
+            this._depth = depth;
+            this._iterations = 0L;
             this._elapsed = TimeSpan.Zero;
+
             bool empty = this._tree.IsEmpty;
             if (hard) this._tree = new Tree();
             return !empty;
@@ -111,10 +116,9 @@ namespace Ace
         /// <summary>
         /// Executes the internal search process with the specified options.
         /// </summary>
-        /// <param name="time">Total search duration, in milliseconds.</param>
+        /// <param name="duration">Total search duration, in milliseconds.</param>
         /// <param name="interval">Interval for periodic progress update.</param>
-        /// <param name="depth">Maximum search depth per simulation.</param>
-        private async Task Execute(uint time, uint interval, uint depth)
+        private async Task Execute(uint duration, uint interval)
         {
             // To Do!
         }
@@ -208,25 +212,24 @@ namespace Ace
         /// <summary>
         /// Executes the main search process with the specified options.
         /// </summary>
-        /// <param name="time">Total search duration, in milliseconds.</param>
+        /// <param name="duration">Total search duration, in milliseconds.</param>
         /// <param name="interval">Interval for periodic progress update.</param>
         /// <param name="depth">Maximum search depth per simulation.</param>
-        public async Task Search(uint time, uint interval, uint depth = 3)
+        public async Task Search(uint duration, uint interval, uint depth)
         {
-            this.Reset(true);
-            await this.Execute(time, interval, depth).ConfigureAwait(false);
+            this.Reset(Math.Min(depth, 3), true);
+            await this.Execute(duration, interval).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Continues the main search process with the specified options.
         /// </summary>
-        /// <param name="time">Total search duration, in milliseconds.</param>
+        /// <param name="duration">Total search duration, in milliseconds.</param>
         /// <param name="interval">Interval for periodic progress update.</param>
-        /// <param name="depth">Maximum search depth per simulation.</param>
-        public async Task Continue(uint time, uint interval, uint depth = 3)
+        public async Task Continue(uint duration, uint interval)
         {
-            if (!this.Reset(false)) return; // Nothing to continue from
-            await this.Execute(time, interval, depth).ConfigureAwait(false);
+            if (!this.Reset(this._depth, false)) return;
+            await this.Execute(duration, interval).ConfigureAwait(false);
         }
 
         /// <summary>
