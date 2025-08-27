@@ -182,20 +182,9 @@ namespace Ace
         /// <returns>A sequence of pairs representing the move distribution.</returns>
         internal IEnumerable<(Node child, double probability)> Policy(double prior)
         {
+            double edges = this._edge_count;
             int childs = this._children.Count;
             if (childs == 0) yield break;
-
-            // Use uniform probability if no data
-            double edges = this._edge_count;
-            if (edges == 0d && prior == 0d)
-            {
-                double probability = 1d / childs;
-                foreach (var child in this._children.Values)
-                {
-                    yield return (child, probability);
-                }
-                yield break;
-            }
 
             // Calculate probability for each child node
             double scale = 1d / (edges + prior * childs);
