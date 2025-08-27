@@ -62,34 +62,6 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="action"></param>
-        private void RaiseEvent(Action action)
-        {
-            if (action == null) return;
-            var context = SynchronizationContext.Current;
-            if (context != null) context.Post(_ => action(), null);
-            else action();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        private void RaiseProgress()
-        {
-            this.ProgressChanged?.Invoke();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        private void RaiseCompleted()
-        {
-            this.SearchCompleted?.Invoke();
-        }
-
-        /// <summary>
         /// Resets search statistics, optionally clears the game tree.
         /// </summary>
         /// <param name="depth">Search depth per simulation.</param>
@@ -104,10 +76,19 @@ namespace Ace
             if (hard) this._tree = new Tree();
             return !empty;
         }
-    }
 
-    public sealed partial class Engine
-    {
+        /// <summary>
+        /// Fires the given callback, using the UI context if there is one.
+        /// </summary>
+        /// <param name="action">Event handler to invoke.</param>
+        private void Trigger(Action action)
+        {
+            if (action == null) return;
+            var context = SynchronizationContext.Current;
+            if (context != null) context.Post(_ => action(), null);
+            else action();
+        }
+
         /// <summary>
         /// Evaluates whether the investigated partnership can achieve their objective:<br></br>
         /// either making the contract (declarer's side) or setting the contract (defenders).<br></br>
@@ -185,7 +166,7 @@ namespace Ace
                         var delay = Task.Delay((int)interval, token);
                         await delay.ConfigureAwait(false);
                         this._elapsed = stopwatch.Elapsed;
-                        this.RaiseEvent(this.ProgressChanged);
+                        this.Trigger(this.ProgressChanged);
                     }
                 }
                 catch {}
@@ -200,8 +181,8 @@ namespace Ace
 
             // Finalize with results and clean up
             this._elapsed = stopwatch.Elapsed;
-            this.RaiseEvent(this.ProgressChanged);
-            this.RaiseEvent(this.SearchCompleted);
+            this.Trigger(this.ProgressChanged);
+            this.Trigger(this.SearchCompleted);
             this._cts.Dispose();
             stopwatch.Stop();
         }
