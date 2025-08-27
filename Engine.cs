@@ -22,9 +22,16 @@ namespace Ace
         private TimeSpan _elapsed;
         private readonly int _threads;
         private readonly object _lock;
-
         private CancellationTokenSource _cts;
+
+        /// <summary>
+        /// Event fired when the search progress is updated.
+        /// </summary>
         public event Action ProgressChanged;
+
+        /// <summary>
+        /// Event fired when the search has finished running.
+        /// </summary>
         public event Action SearchCompleted;
 
         /// <summary>
