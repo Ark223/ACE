@@ -177,7 +177,7 @@ namespace Ace
                     // Keep the loop active until cancelled
                     while (!token.IsCancellationRequested)
                     {
-                        // Wait for the next interval or exit if cancelled
+                        // Wait for the next interval before triggering update
                         await Task.Delay(interval, token).ConfigureAwait(false);
 
                         // Notify listeners that progress has been updated
