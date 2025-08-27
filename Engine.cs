@@ -124,9 +124,9 @@ namespace Ace
         }
 
         /// <summary>
-        /// Runs simulations to build out the search tree in a loop until stopped.
+        /// Runs simulations to build out the search tree until stopped.
         /// </summary>
-        /// <param name="token">Token to signal when to cancel the search.</param>
+        /// <param name="token">Token for canceling the operation.</param>
         private void Simulate(in CancellationToken token)
         {
             while (!token.IsCancellationRequested)
