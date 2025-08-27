@@ -126,9 +126,8 @@ namespace Ace
         /// <summary>
         /// Runs simulations to build out the search tree in a loop until stopped.
         /// </summary>
-        /// <param name="depth">Maximum depth for each search iteration.</param>
         /// <param name="token">Token to signal when to cancel the search.</param>
-        private void Simulate(int depth, in CancellationToken token)
+        private void Simulate(in CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
@@ -142,7 +141,7 @@ namespace Ace
                 this._sampler.Synchronize(ref deal);
 
                 // Start a search simulation from the tree root
-                this.Query(this._tree.Root, ref deal, depth);
+                this.Query(this._tree.Root, ref deal, this._depth);
             }
         }
 
