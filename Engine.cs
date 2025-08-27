@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,7 +21,9 @@ namespace Ace
         private TimeSpan _elapsed;
         private readonly int _threads;
         private readonly object _lock;
+
         private CancellationTokenSource _cts;
+        private readonly SynchronizationContext _context;
 
         /// <summary>
         /// Event fired when the search progress is updated.
@@ -53,6 +54,7 @@ namespace Ace
             this._lock = new object();
             this._elapsed = TimeSpan.Zero;
             this._threads = Math.Max(1, threads);
+            this._context = SynchronizationContext.Current;
         }
 
         /// <summary>
@@ -87,13 +89,14 @@ namespace Ace
         /// <summary>
         /// Fires the given callback, using the UI context if there is one.
         /// </summary>
-        /// <param name="action">Event handler to invoke.</param>
-        private void Trigger(Action action)
+        /// <param name="callback">Event handler to invoke.</param>
+        /// <param name="elapsed">Elapsed time to record.</param>
+        private void Trigger(Action callback, TimeSpan elapsed)
         {
-            if (action == null) return;
-            var context = SynchronizationContext.Current;
-            if (context != null) context.Post(_ => action(), null);
-            else action();
+            this._elapsed = elapsed;
+            if (callback == null) return;
+            if (this._context == null) callback();
+            else this._context.Post(_ => callback(), null);
         }
 
         /// <summary>
@@ -143,53 +146,64 @@ namespace Ace
         /// </summary>
         /// <param name="duration">Total search duration, in milliseconds.</param>
         /// <param name="interval">Interval for periodic progress update.</param>
-        private async Task Execute(uint duration, uint interval)
+        private async Task Execute(int duration, int interval)
         {
             // Ensure sensible minimum values
-            interval = Math.Max(250u, interval);
-            duration = Math.Max(250u, duration);
+            interval = Math.Max(250, interval);
+            duration = Math.Max(250, duration);
             if (interval > duration) interval = duration;
 
-            // Set up a token that triggers after duration
+            // Set up a stopwatch to control the duration 
             var time = TimeSpan.FromMilliseconds(duration);
             Stopwatch stopwatch = Stopwatch.StartNew();
+
+            // Token triggers after the time runs out
             this._cts = new CancellationTokenSource();
             this._cts.CancelAfter(time);
+            var token = this._cts.Token;
 
-            // Start workers for running simulations
-            CancellationToken token = this._cts.Token;
+            // Start workers for running parallel simulations
             List<Task> workers = new List<Task>(this._threads);
             for (int thread = 0; thread < this._threads; thread++)
+            {
                 workers.Add(Task.Run(() => Simulate(token), token));
+            }
 
             // Start periodic progress reporting
             var progress = Task.Run(async () =>
             {
                 try
                 {
+                    // Keep the loop active until cancelled
                     while (!token.IsCancellationRequested)
                     {
-                        // Wait for the next progress update interval
-                        var delay = Task.Delay((int)interval, token);
-                        await delay.ConfigureAwait(false);
-                        this._elapsed = stopwatch.Elapsed;
-                        this.Trigger(this.ProgressChanged);
+                        // Wait for the next interval or exit if cancelled
+                        await Task.Delay(interval, token).ConfigureAwait(false);
+
+                        // Notify listeners that progress has been updated
+                        this.Trigger(this.ProgressChanged, stopwatch.Elapsed);
                     }
                 }
-                catch {}
+                catch (OperationCanceledException) {}
             }, token);
 
-            // Wait for search threads to finish (may exit early if cancelled)
-            try { await Task.WhenAll(workers).ConfigureAwait(false); } catch {}
+            try
+            {
+                // Include progress reporter into awaited tasks
+                workers.Add(progress);
 
-            // Stop the progress loop immediately if it’s still running
-            if (!this._cts.IsCancellationRequested) this._cts.Cancel();
-            try { await progress.ConfigureAwait(false); } catch {}
+                // Wait for all search and progress tasks to finish
+                await Task.WhenAll(workers).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) {}
 
-            // Finalize with results and clean up
-            this._elapsed = stopwatch.Elapsed;
-            this.Trigger(this.ProgressChanged);
-            this.Trigger(this.SearchCompleted);
+            // Notify listeners with the final progress update
+            this.Trigger(this.ProgressChanged, stopwatch.Elapsed);
+
+            // Notify listeners that the search has been completed
+            this.Trigger(this.SearchCompleted, stopwatch.Elapsed);
+
+            // Clean up resources
             this._cts.Dispose();
             stopwatch.Stop();
         }
@@ -292,7 +306,7 @@ namespace Ace
         /// </summary>
         /// <param name="duration">Total search duration, in milliseconds.</param>
         /// <param name="interval">Interval for periodic progress update.</param>
-        public async Task Continue(uint duration, uint interval)
+        public async Task Continue(int duration, int interval)
         {
             if (!this.Reset(this._depth, false)) return;
             await this.Execute(duration, interval).ConfigureAwait(false);
@@ -304,9 +318,9 @@ namespace Ace
         /// <param name="duration">Total search duration, in milliseconds.</param>
         /// <param name="interval">Interval for periodic progress update.</param>
         /// <param name="depth">Maximum search depth per simulation.</param>
-        public async Task Search(uint duration, uint interval, uint depth)
+        public async Task Search(int duration, int interval, uint depth)
         {
-            this.Reset(Math.Min(depth, 3), true);
+            this.Reset(Math.Max(1, Math.Min(depth, 3)), true);
             await this.Execute(duration, interval).ConfigureAwait(false);
         }
 
