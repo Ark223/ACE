@@ -53,6 +53,17 @@ namespace Ace
     internal sealed partial class Deal
     {
         /// <summary>
+        /// Updates the state key with the played card.
+        /// </summary>
+        /// <param name="card">Card played.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void UpdateKey(in Card card)
+        {
+            this._state_key ^= (uint)card.Index();
+            this._state_key *= this._prime;
+        }
+
+        /// <summary>
         /// Returns the trick-taking priority of a card: trump (2), led suit (1), or other (0).
         /// </summary>
         /// <param name="card">Card to evaluate.</param>
@@ -90,16 +101,6 @@ namespace Ace
             // Update and prepare next trick
             this._trick = new Trick(player);
             this._leader = player;
-        }
-
-        /// <summary>
-        /// Updates the state key with the played card.
-        /// </summary>
-        /// <param name="card">Card played.</param>
-        private void UpdateKey(in Card card)
-        {
-            this._state_key ^= (uint)card.Index();
-            this._state_key *= this._prime;
         }
     }
 

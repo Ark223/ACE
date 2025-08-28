@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace Ace
 {
@@ -41,7 +40,6 @@ namespace Ace
         /// Returns a random integer in the [0, Max) range.
         /// </summary>
         /// <returns>A random value in specified range.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static int Next(int max)
         {
             return Instance.Next(max);
@@ -53,7 +51,6 @@ namespace Ace
         /// <param name="min">Lower bound (inclusive).</param>
         /// <param name="max">Upper bound (exclusive).</param>
         /// <returns>A random value in specified range.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static int Next(int min, int max)
         {
             return Instance.Next(min, max);
@@ -64,7 +61,6 @@ namespace Ace
         /// </summary>
         /// <typeparam name="T">Element type.</typeparam>
         /// <param name="list">List to shuffle.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void Shuffle<T>(IList<T> list)
         {
             for (int i = list.Count - 1; i > 0; i--)
