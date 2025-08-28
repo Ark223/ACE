@@ -1,14 +1,31 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Ace
 {
+    /// <summary>
+    /// Tracks how many times each card has been played from a node.
+    /// </summary>
+    using Actions = ConcurrentDictionary<Card, int>;
+
+    /// <summary>
+    /// Maps each card to its corresponding child node in the tree.
+    /// </summary>
+    using Children = ConcurrentDictionary<Card, Node>;
+
+    /// <summary>
+    /// Associates a unique info-state key with its corresponding node.
+    /// </summary>
+    using States = ConcurrentDictionary<uint, Node>;
+
     /// <summary>
     /// Represents an info-state tree for caching and retrieving nodes by key.
     /// </summary>
     internal sealed class Tree
     {
         private readonly Node _root;
-        private readonly Dictionary<uint, Node> _states;
+        private readonly States _states;
 
         /// <summary>
         /// Returns true if the tree has no stored nodes.
@@ -26,7 +43,7 @@ namespace Ace
         internal Tree()
         {
             this._root = new Node(true);
-            this._states = new Dictionary<uint, Node>();
+            this._states = new States();
         }
 
         /// <summary>
@@ -40,12 +57,9 @@ namespace Ace
             // Return the initial info-state
             if (key == 0u) return this._root;
 
-            // Create a new node if this key does not exist
-            if (!this._states.TryGetValue(key, out Node node))
-            {
-                this._states.Add(key, node = new Node(maximize));
-            }
-            return node;
+            // Create a new node if key does not exist
+            Node factory(uint _) => new Node(maximize);
+            return this._states.GetOrAdd(key, factory);
         }
     }
 
@@ -54,25 +68,25 @@ namespace Ace
     /// </summary>
     internal sealed partial class Node
     {
-        private ulong _tricks;
-        private uint _edge_count;
-        private uint _winnings;
-        private uint _samples;
-        private uint _visits;
+        private long _tricks;
+        private int _winnings;
+        private int _act_sum;
+        private int _samples;
+        private int _visits;
 
         private readonly bool _maximizing;
-        private readonly Dictionary<Card, Node> _children;
-        private readonly Dictionary<Card, uint> _edge_visits;
-
-        /// <summary>
-        /// Gets the number of times this node was visited during search.
-        /// </summary>
-        internal uint Visits => this._visits;
+        private readonly Actions _actions;
+        private readonly Children _children;
 
         /// <summary>
         /// True if this node is set to maximize; false if it minimizes.
         /// </summary>
         internal bool Maximizing => this._maximizing;
+
+        /// <summary>
+        /// Gets the number of times this node was visited during search.
+        /// </summary>
+        internal int Visits => Volatile.Read(ref this._visits);
 
         /// <summary>
         /// Gets reachable child nodes keyed by the card played.
@@ -86,8 +100,9 @@ namespace Ace
         {
             get
             {
-                if (this._samples == 0u) return 0d;
-                return (double)this._tricks / this._samples;
+                int samples = Volatile.Read(ref this._samples);
+                long tricks = Interlocked.Read(ref this._tricks);
+                return samples != 0 ? (double)tricks / samples : 0d;
             }
         }
 
@@ -98,8 +113,9 @@ namespace Ace
         {
             get
             {
-                if (this._samples == 0u) return 0d;
-                return (double)this._winnings / this._samples;
+                int samples = Volatile.Read(ref this._samples);
+                int winnings = Volatile.Read(ref this._winnings);
+                return samples != 0 ? (double)winnings / samples : 0d;
             }
         }
 
@@ -110,8 +126,8 @@ namespace Ace
         internal Node(bool maximizing = true)
         {
             this._maximizing = maximizing;
-            this._children = new Dictionary<Card, Node>();
-            this._edge_visits = new Dictionary<Card, uint>();
+            this._actions = new Actions();
+            this._children = new Children();
         }
 
         /// <summary>
@@ -121,7 +137,7 @@ namespace Ace
         /// <param name="node">Child node.</param>
         internal void AddChild(in Card card, in Node node)
         {
-            this._children.Add(card, node);
+            this._children.TryAdd(card, node);
         }
 
         /// <summary>
@@ -129,7 +145,7 @@ namespace Ace
         /// </summary>
         internal void AddVisit()
         {
-            this._visits++;
+            Interlocked.Increment(ref this._visits);
         }
 
         /// <summary>
@@ -153,14 +169,13 @@ namespace Ace
         }
 
         /// <summary>
-        /// Get the current visit count for a move edge from this node.
+        /// Gets the visit count of the card played from this node.
         /// </summary>
         /// <param name="card">Card played.</param>
-        /// <returns></returns>
-        internal uint GetEdgeVisits(in Card card)
+        /// <returns>Visit count for this card.</returns>
+        internal int GetVisits(in Card card)
         {
-            return this._edge_visits.TryGetValue(
-                card, out uint count) ? count : 0u;
+            return this._actions.TryGetValue(card, out int count) ? count : 0;
         }
 
         /// <summary>
@@ -170,9 +185,9 @@ namespace Ace
         /// <param name="tricks">Number of tricks taken.</param>
         internal void Insert(bool win, int tricks)
         {
-            this._samples++;
-            this._tricks += (uint)tricks;
-            if (win) this._winnings++;
+            Interlocked.Increment(ref this._samples);
+            Interlocked.Add(ref this._tricks, tricks);
+            if (win) Interlocked.Increment(ref this._winnings);
         }
 
         /// <summary>
@@ -182,15 +197,17 @@ namespace Ace
         /// <returns>A sequence of pairs representing the move distribution.</returns>
         internal IEnumerable<(Node child, double probability)> Policy(double prior)
         {
-            double edges = this._edge_count;
             int childs = this._children.Count;
             if (childs == 0) yield break;
 
-            // Calculate probability for each child node
-            double scale = 1d / (edges + prior * childs);
+            // Compute normalization factor for probabilities
+            double actions = Volatile.Read(ref this._act_sum);
+            double scale = 1d / (actions + prior * childs);
+
+            // Assign probability to each child node
             foreach (var entry in this._children)
             {
-                double visits = this.GetEdgeVisits(entry.Key);
+                double visits = this.GetVisits(entry.Key);
                 double probability = (visits + prior) * scale;
                 yield return (entry.Value, probability);
             }
@@ -202,11 +219,9 @@ namespace Ace
         /// <param name="card">Card played.</param>
         internal void Record(in Card card)
         {
-            if (!this._edge_visits.TryAdd(card, 1u))
-            {
-                this._edge_visits[card]++;
-            }
-            this._edge_count++;
+            Interlocked.Increment(ref this._act_sum);
+            int add_visit(Card _, int total) => total + 1;
+            this._actions.AddOrUpdate(card, 1, add_visit);
         }
 
         /// <summary>

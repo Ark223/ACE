@@ -36,12 +36,12 @@ namespace Ace
         public event Action SearchCompleted;
 
         /// <summary>
-        /// Gets the total elapsed time spent performing the search operation.
+        /// Gets the total elapsed time of the search operation.
         /// </summary>
-        public TimeSpan Elapsed { get { lock (this._lock) return this._elapsed; } }
+        public TimeSpan Elapsed => this._elapsed;
 
         /// <summary>
-        /// Gets the current count of search iterations that have been performed so far.
+        /// Gets the total count of search iterations performed so far.
         /// </summary>
         public long Iterations => Interlocked.Read(ref this._iterations);
 
@@ -157,7 +157,7 @@ namespace Ace
             var time = TimeSpan.FromMilliseconds(duration);
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            // Token triggers after the time runs out
+            // Token triggers after the allocated time
             this._cts = new CancellationTokenSource();
             this._cts.CancelAfter(time);
             var token = this._cts.Token;
@@ -166,6 +166,7 @@ namespace Ace
             List<Task> workers = new List<Task>(this._threads);
             for (int thread = 0; thread < this._threads; thread++)
             {
+                // Each worker contributes to the shared search tree
                 workers.Add(Task.Run(() => Simulate(token), token));
             }
 
@@ -227,6 +228,9 @@ namespace Ace
 
                 // Start a search simulation from the tree root
                 this.Query(this._tree.Root, ref deal, this._depth);
+
+                // Increment counter of completed simulations
+                Interlocked.Increment(ref this._iterations);
             }
         }
 
