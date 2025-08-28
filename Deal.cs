@@ -11,6 +11,7 @@ namespace Ace
     /// </summary>
     internal sealed partial class Deal
     {
+        private string _pbn;
         private Trick _trick;
         private Player _leader;
 
@@ -31,6 +32,15 @@ namespace Ace
         /// Gets the player who is currently on lead.
         /// </summary>
         internal Player Leader => this._leader;
+
+        /// <summary>
+        /// Gets or sets the PBN representation of the deal.
+        /// </summary>
+        internal string Pbn
+        {
+            get => this._pbn;
+            set => this._pbn = value ?? string.Empty;
+        }
 
         /// <summary>
         /// Initializes a new <see cref="Deal"/> from full hands and current trick state.
@@ -222,9 +232,9 @@ namespace Ace
             // Return tricks won if game has finished
             if (this.IsOver()) return this._tricks[side];
 
-            // Calculate remaining tricks available
-            int remain = this.Solve(this.ToPBN());
-            return this._tricks[side] + remain;
+            // Calculate overall number of tricks
+            int remaining = this.Solve(this._pbn);
+            return this._tricks[side] + remaining;
         }
 
         /// <summary>
@@ -263,11 +273,9 @@ namespace Ace
                             sb.Append(Card.RankToChar[rank]);
                         }
                     }
-
                     // Store string for this hand
                     ranks[idx] = sb.ToString();
                 }
-
                 // Join suits as "S.H.D.C" for this seat
                 hands[seat] = string.Join(".", ranks);
             }

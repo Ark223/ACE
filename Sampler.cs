@@ -229,6 +229,9 @@ namespace Ace
             // Remove all played cards
             deal.CutHands(this._plays);
 
+            // Build PBN from this state
+            deal.Pbn = deal.ToPBN();
+
             // Replay the current trick
             return deal.Replay();
         }
