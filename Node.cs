@@ -1,14 +1,11 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Ace
 {
-    /// <summary>
-    /// Tracks how many times each card has been played from a node.
-    /// </summary>
-    using Actions = ConcurrentDictionary<Card, int>;
-
     /// <summary>
     /// Maps each card to its corresponding child node in the tree.
     /// </summary>
@@ -70,17 +67,20 @@ namespace Ace
     {
         private long _tricks;
         private int _winnings;
-        private int _act_sum;
         private int _visits;
 
         private readonly bool _maximizing;
-        private readonly Actions _actions;
         private readonly Children _children;
 
         /// <summary>
         /// True if this node is set to maximize; false if it minimizes.
         /// </summary>
         internal bool Maximizing => this._maximizing;
+
+        /// <summary>
+        /// Gets the number of times this node was visited during search.
+        /// </summary>
+        internal int Visits => Volatile.Read(ref this._visits);
 
         /// <summary>
         /// Gets reachable child nodes keyed by the card played.
@@ -120,7 +120,6 @@ namespace Ace
         internal Node(bool maximizing = true)
         {
             this._maximizing = maximizing;
-            this._actions = new Actions();
             this._children = new Children();
         }
 
@@ -163,16 +162,6 @@ namespace Ace
         }
 
         /// <summary>
-        /// Gets the visit count of the card played from this node.
-        /// </summary>
-        /// <param name="card">Card played.</param>
-        /// <returns>Visit count for this card.</returns>
-        internal int GetVisits(in Card card)
-        {
-            return this._actions.TryGetValue(card, out int count) ? count : 0;
-        }
-
-        /// <summary>
         /// Records an evaluation result (win and tricks) at this node.
         /// </summary>
         /// <param name="win">True if this result is a win.</param>
@@ -193,28 +182,17 @@ namespace Ace
             int childs = this._children.Count;
             if (childs == 0) yield break;
 
-            // Compute normalization factor for probabilities
-            double actions = Volatile.Read(ref this._act_sum);
-            double scale = 1d / (actions + prior * childs);
+            // Sum up how many times each child has been visited
+            int visits = this._children.Values.Sum(c => c.Visits);
+
+            // Work out the scaling factor so probabilities sum up to 1
+            double scale = 1d / Math.Max(prior * childs + visits, childs);
 
             // Assign probability to each child node
-            foreach (var entry in this._children)
+            foreach (Node node in this._children.Values)
             {
-                double visits = this.GetVisits(entry.Key);
-                double probability = (visits + prior) * scale;
-                yield return (entry.Value, probability);
+                yield return (node, (node.Visits + prior) * scale);
             }
-        }
-
-        /// <summary>
-        /// Records that this card has been played from this node.
-        /// </summary>
-        /// <param name="card">Card played.</param>
-        internal void Record(in Card card)
-        {
-            Interlocked.Increment(ref this._act_sum);
-            int add_visit(Card _, int total) => total + 1;
-            this._actions.AddOrUpdate(card, 1, add_visit);
         }
 
         /// <summary>

@@ -262,9 +262,6 @@ namespace Ace
             // Play the card and advance
             uint key = world.Play(card);
 
-            // Record edge usage
-            node.Record(card);
-
             // Look up a child node for this move
             if (!node.TryGet(card, out Node child))
             {
