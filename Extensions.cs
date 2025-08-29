@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Ace
+﻿namespace Ace
 {
     /// <summary>
     /// Utility extension methods and enums for bridge game.
@@ -61,25 +59,6 @@ namespace Ace
         public static Player Advance(this Player player, int steps)
         {
             return (Player)(((int)player + steps) % 4);
-        }
-
-        /// <summary>
-        /// Attempts to add the specified key and value to the dictionary (for environments before C# 8.0).
-        /// </summary>
-        /// <typeparam name="TKey">Type of the key.</typeparam>
-        /// <typeparam name="TValue">Type of the value.</typeparam>
-        /// <param name="dict">Dictionary in which to insert the new key-value pair.</param>
-        /// <param name="key">Key to add. If this key exists, the dictionary is unchanged.</param>
-        /// <param name="value">Value to associate with the key if it is not already present.</param>
-        /// <returns>True if the key and value were added; false if this key already exists.</returns>
-        public static bool TryAdd<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
-        {
-            if (!dict.ContainsKey(key))
-            {
-                dict.Add(key, value);
-                return true;
-            }
-            return false;
         }
     }
 }

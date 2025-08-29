@@ -71,7 +71,6 @@ namespace Ace
         private long _tricks;
         private int _winnings;
         private int _act_sum;
-        private int _samples;
         private int _visits;
 
         private readonly bool _maximizing;
@@ -82,11 +81,6 @@ namespace Ace
         /// True if this node is set to maximize; false if it minimizes.
         /// </summary>
         internal bool Maximizing => this._maximizing;
-
-        /// <summary>
-        /// Gets the number of times this node was visited during search.
-        /// </summary>
-        internal int Visits => Volatile.Read(ref this._visits);
 
         /// <summary>
         /// Gets reachable child nodes keyed by the card played.
@@ -100,9 +94,9 @@ namespace Ace
         {
             get
             {
-                int samples = Volatile.Read(ref this._samples);
+                int visits = Volatile.Read(ref this._visits);
                 long tricks = Interlocked.Read(ref this._tricks);
-                return samples != 0 ? (double)tricks / samples : 0d;
+                return visits != 0 ? (double)tricks / visits : 0d;
             }
         }
 
@@ -113,9 +107,9 @@ namespace Ace
         {
             get
             {
-                int samples = Volatile.Read(ref this._samples);
+                int visits = Volatile.Read(ref this._visits);
                 int winnings = Volatile.Read(ref this._winnings);
-                return samples != 0 ? (double)winnings / samples : 0d;
+                return visits != 0 ? (double)winnings / visits : 0d;
             }
         }
 
@@ -185,7 +179,6 @@ namespace Ace
         /// <param name="tricks">Number of tricks taken.</param>
         internal void Insert(bool win, int tricks)
         {
-            Interlocked.Increment(ref this._samples);
             Interlocked.Add(ref this._tricks, tricks);
             if (win) Interlocked.Increment(ref this._winnings);
         }
