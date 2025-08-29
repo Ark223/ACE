@@ -94,7 +94,7 @@ namespace Ace
         {
             get
             {
-                int visits = Volatile.Read(ref this._visits);
+                int visits = this.Visits;
                 long tricks = Interlocked.Read(ref this._tricks);
                 return visits != 0 ? (double)tricks / visits : 0d;
             }
@@ -107,7 +107,7 @@ namespace Ace
         {
             get
             {
-                int visits = Volatile.Read(ref this._visits);
+                int visits = this.Visits;
                 int winnings = Volatile.Read(ref this._winnings);
                 return visits != 0 ? (double)winnings / visits : 0d;
             }
