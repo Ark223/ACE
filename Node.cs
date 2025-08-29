@@ -182,7 +182,7 @@ namespace Ace
             int childs = this._children.Count;
             if (childs == 0) yield break;
 
-            // Sum up how many times each child has been visited
+            // Count how many times each child has been visited
             int visits = this._children.Values.Sum(c => c.Visits);
 
             // Work out the scaling factor so probabilities sum up to 1
