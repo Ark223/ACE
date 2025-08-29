@@ -279,7 +279,7 @@ namespace Ace
                 // Join suits as "S.H.D.C" for this seat
                 hands[seat] = string.Join(".", ranks);
             }
-            return string.Join(" ", hands);
+            return "N:" + string.Join(" ", hands);
         }
     }
 }

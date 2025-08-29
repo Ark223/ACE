@@ -16,16 +16,16 @@ namespace Ace
         /// </summary>
         private static class Solver
         {
-            [DllImport("libcalcdds", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+            [DllImport("libbcalcdds", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
             internal static extern IntPtr bcalcDDS_new(string format, string hands, int strain, int leader);
 
-            [DllImport("libcalcdds", CallingConvention = CallingConvention.Cdecl)]
+            [DllImport("libbcalcdds", CallingConvention = CallingConvention.Cdecl)]
             internal static extern void bcalcDDS_delete(IntPtr solver);
 
-            [DllImport("libcalcdds", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+            [DllImport("libbcalcdds", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
             internal static extern void bcalcDDS_exec(IntPtr solver, string command);
 
-            [DllImport("libcalcdds", CallingConvention = CallingConvention.Cdecl)]
+            [DllImport("libbcalcdds", CallingConvention = CallingConvention.Cdecl)]
             internal static extern int bcalcDDS_getTricksToTake(IntPtr solver);
         }
 
