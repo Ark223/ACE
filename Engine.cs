@@ -74,15 +74,25 @@ namespace Ace
         /// Resets search statistics, optionally clears the game tree.
         /// </summary>
         /// <param name="depth">Search depth per simulation.</param>
-        /// <param name="hard">Whether to clear the tree.</param>
-        private bool Reset(uint depth, bool hard)
+        /// <param name="hard_reset">Whether to clear content.</param>
+        private bool Reset(uint depth, bool hard_reset)
         {
             this._depth = depth;
             this._iterations = 0L;
             this._elapsed = TimeSpan.Zero;
 
+            // Check if the tree has any nodes
             bool empty = this._tree.IsEmpty;
-            if (hard) this._tree = new Tree();
+
+            // Reset everything
+            if (hard_reset)
+            {
+                // Clear the current tree
+                this._tree = new Tree();
+
+                // Initialize the sampler for new run
+                this._sampler = this._game.Sampling();
+            }
             return !empty;
         }
 
@@ -95,7 +105,11 @@ namespace Ace
         {
             this._elapsed = elapsed;
             if (callback == null) return;
+
+            // Call directly if not running on UI
             if (this._context == null) callback();
+
+            // Post this callback to the correct context
             else this._context.Post(_ => callback(), null);
         }
 
@@ -148,9 +162,6 @@ namespace Ace
         /// <param name="interval">Interval for periodic progress update.</param>
         private async Task Execute(int duration, int interval)
         {
-            // Initialize the sampler for this run
-            this._sampler = this._game.Sampling();
-
             // Ensure sensible minimum values
             interval = Math.Max(250, interval);
             duration = Math.Max(250, duration);
