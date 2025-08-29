@@ -148,6 +148,9 @@ namespace Ace
         /// <param name="interval">Interval for periodic progress update.</param>
         private async Task Execute(int duration, int interval)
         {
+            // Initialize the sampler for this run
+            this._sampler = this._game.Sampling();
+
             // Ensure sensible minimum values
             interval = Math.Max(250, interval);
             duration = Math.Max(250, duration);
@@ -290,7 +293,6 @@ namespace Ace
         public void SetGame(in Game game)
         {
             this._game = game;
-            this._sampler = game.Sampling();
             this._side = ((int)game.Leader) & 1;
         }
 
