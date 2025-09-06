@@ -116,9 +116,7 @@ ACE allows querying pseudo-legal moves during gameplay - "pseudo" because some c
 You can list the current player's available moves and check whether a specific card is legal in the current game state.  
 
 ```csharp
-var moves = game.GetMoves(); // List of card objects
-var list = moves.Select<string>(c => c.ToString()); // Strings
-Console.WriteLine("Available moves: " + string.Join(", ", list));
+Console.WriteLine("Available moves: " + string.Join(", ", game.GetMoves()));
 
 if (!game.IsLegit("AS"))
     Console.WriteLine("Ace of Spades is not legal in this state!");
