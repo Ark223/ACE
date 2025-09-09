@@ -148,8 +148,10 @@ namespace Ace
             if (this._trick.Count == 0) return hand;
 
             // Otherwise, must follow suit if able
-            Suit lead = this._trick.Cards[0].Suit;
-            var follow = hand.Where(c => c.Suit == lead);
+            Suit suit = this._trick.Cards[0].Suit;
+
+            // Filter all cards matching the lead suit
+            var follow = hand.Where(c => c.Suit == suit);
             return follow.Any() ? follow.ToList() : hand;
         }
 
@@ -239,8 +241,10 @@ namespace Ace
             // Return tricks won if game has finished
             if (this.IsOver()) return this._tricks[side];
 
-            // Calculate overall number of tricks
+            // Solve for remaining tricks using DDS
             int remaining = this.Solve(this._pbn);
+
+            // Calculate total tricks for the side
             return this._tricks[side] + remaining;
         }
 
