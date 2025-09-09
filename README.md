@@ -113,14 +113,19 @@ Once the options are set up, we can create a new game instance using the <code>G
 
 ### Legality checking
 
-ACE allows querying pseudo-legal moves during gameplay - "pseudo" because some cards may still be hidden.  
-You can list the current player's available moves and check whether a specific card is legal in the current game state.  
+ACE allows querying pseudo-legal moves during gameplay - "pseudo" because some cards may still be hidden.
+
+To see which cards the current player can potentially play, call the <code>GetMoves</code> method (returned as card objects):
 
 ```csharp
 var moves = string.Join(", ", game.GetMoves());
 Console.WriteLine("Available moves: " + moves);
+```
 
-if (!game.IsLegit("AS"))
+You can also check if a particular card is "legal" to play in the current state by using <code>IsLegal</code> method:
+
+```csharp
+if (!game.IsLegal("AS"))
     Console.WriteLine("Ace of Spades is not legal play!");
 ```
 
@@ -161,7 +166,7 @@ var tricks = game.GetTricks(Player.North);
 Console.WriteLine("Tricks won by NS: " + tricks);
 ```
 
-You can also clone the current game state to try out different plays without affecting the original game:
+You can clone the game state to explore different plays independently, without affecting the original game.
 
 ```csharp
 var copy = game.Clone();
