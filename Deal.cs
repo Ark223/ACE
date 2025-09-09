@@ -225,9 +225,9 @@ namespace Ace
         }
 
         /// <summary>
-        /// Computes how many tricks the leader’s partnership can still take.
+        /// Computes total tricks for the leader’s pair (actual or projected).
         /// </summary>
-        /// <returns>A number of tricks the leader's pair can collect.</returns>
+        /// <returns>Tricks won or projected for the leader's side.</returns>
         internal int Tricks()
         {
             // Determine sides (0 = NS, 1 = EW)

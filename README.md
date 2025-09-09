@@ -154,6 +154,20 @@ game.Play("7S", false); // Bypass legality check for 7S
 game.Play("AS", false); // Bypass check as well for AS
 ```
 
+To check how many tricks a partnership has won so far, call <code>GetTricks</code> with any player from that pair:
+
+```csharp
+int tricks = game.GetTricks(Player.North);
+Console.WriteLine("Tricks won by NS: " + tricks);
+```
+
+You can also clone the current game state to try out different plays without affecting the original game:
+
+```csharp
+var copy = game.Clone();
+copy.Play("4C", false);
+```
+
 ---
 
 ### Analyzing games
