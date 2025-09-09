@@ -141,9 +141,10 @@ namespace Ace
         /// </returns>
         internal List<Card> GetMoves()
         {
-            // On lead, any card can be played
             int leader = (int)this._leader;
             ref var hand = ref this._hands[leader];
+
+            // On first lead, any card can be played
             if (this._trick.Count == 0) return hand;
 
             // Otherwise, must follow suit if able
@@ -181,8 +182,10 @@ namespace Ace
             // Record this play in a move history
             this._history.Add(card.ToString());
 
-            // Determine a trick winner or pass the lead
+            // Finish the trick if 4 cards have been played
             if (this._trick.Count == 4) this.FinishTrick();
+
+            // Otherwise, pass lead to the next player
             else this._leader = this._leader.Next();
 
             // Return a new state key

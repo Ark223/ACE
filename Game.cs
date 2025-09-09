@@ -521,12 +521,14 @@ namespace Ace
             // Remove card from the player’s hand
             this._hands[(int)this._leader] &= ~bit;
 
-            // Mark card as played and add to trick
+            // Record new play and update the trick
             this._plays[(int)this._leader] |= bit;
             this._trick.Insert(card);
 
-            // Determine a trick winner or pass the lead
+            // Finish the trick if 4 cards have been played
             if (this._trick.Count == 4) this.FinishTrick();
+
+            // Otherwise, pass lead to the next player
             else this._leader = this._leader.Next();
 
             return true;
