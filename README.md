@@ -157,7 +157,7 @@ game.Play("AS", false); // Bypass check as well for AS
 To check how many tricks a partnership has won so far, call <code>GetTricks</code> with any player from that pair:
 
 ```csharp
-int tricks = game.GetTricks(Player.North);
+var tricks = game.GetTricks(Player.North);
 Console.WriteLine("Tricks won by NS: " + tricks);
 ```
 
