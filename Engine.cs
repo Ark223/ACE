@@ -271,8 +271,8 @@ namespace Ace
                 // Increment and fetch the counter of tested simulations
                 long iters = Interlocked.Increment(ref this._iterations);
 
-                // Cancel all tasks if we've reached the max iterations
-                if (iters >= this._max_iters) { this.Cancel(); break; }
+                // Cancel tasks if reached the iteration limit
+                if (iters >= this._max_iters) this.Cancel();
 
                 // Generate new determinization sample
                 Deal deal = this._sampler.Generate();
