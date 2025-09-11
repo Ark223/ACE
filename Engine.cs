@@ -23,11 +23,12 @@ namespace Ace
         private Sampler _sampler;
 
         private int _depth;
+        private long _max_iters;
         private long _iterations;
         private TimeSpan _elapsed;
+
         private readonly int _threads;
         private readonly object _lock;
-
         private CancellationTokenSource _cts;
         private readonly SynchronizationContext _context;
 
@@ -59,6 +60,7 @@ namespace Ace
         {
             this._lock = new object();
             this._elapsed = TimeSpan.Zero;
+            this._max_iters = long.MaxValue;
             this._threads = Math.Max(1, threads);
             this._context = SynchronizationContext.Current;
         }
@@ -123,6 +125,9 @@ namespace Ace
                 this._tree = new Tree();
                 return true;
             }
+
+            // Determine a new side from game leader
+            this._side = ((int)this._game.Leader) & 1;
 
             // Soft reset: only continue if tree is filled
             return this._tree != null && !this._tree.IsEmpty;
@@ -263,8 +268,11 @@ namespace Ace
         {
             while (!token.IsCancellationRequested)
             {
-                // Increment counter of tested simulations
-                Interlocked.Increment(ref this._iterations);
+                // Increment and fetch the counter of tested simulations
+                long iters = Interlocked.Increment(ref this._iterations);
+
+                // Cancel all tasks if we've reached the max iterations
+                if (iters >= this._max_iters) { this.Cancel(); break; }
 
                 // Generate new determinization sample
                 Deal deal = this._sampler.Generate();
@@ -327,13 +335,21 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
-        /// Configures the engine with a new game to be evaluated.
+        /// Assigns a new game for the engine to analyze.
         /// </summary>
-        /// <param name="game">Game instance for analysis.</param>
+        /// <param name="game">New game instance.</param>
         public void SetGame(in Game game)
         {
             this._game = game;
-            this._side = ((int)game.Leader) & 1;
+        }
+
+        /// <summary>
+        /// Sets the maximum number of search iterations allowed.
+        /// </summary>
+        /// <param name="iterations">Limit on iterations.</param>
+        public void SetIterations(long iterations)
+        {
+            this._max_iters = iterations;
         }
 
         /// <summary>

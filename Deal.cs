@@ -14,9 +14,9 @@ namespace Ace
         private string _pbn;
         private Trick _trick;
         private Player _leader;
-        private Player _origin;
 
         private readonly Suit _trump;
+        private readonly Player _origin;
         private readonly byte[] _tricks;
         private readonly List<Card>[] _hands;
         private readonly List<string> _history;

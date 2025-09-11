@@ -17,7 +17,20 @@ namespace Ace
         /// <summary>
         /// Global random generator used to seed thread-local instances.
         /// </summary>
-        private static readonly System.Random _global = new System.Random();
+        private static readonly System.Random _global;
+
+        /// <summary>
+        /// Global seed used to initialize the thread-local generators.
+        /// </summary>
+        private static readonly int _seed = 0x5851f42d;
+
+        /// <summary>
+        /// Global random generator setup with a fixed seed.
+        /// </summary>
+        static Random()
+        {
+            _global = new System.Random(_seed);
+        }
 
         /// <summary>
         /// Gets the thread-local <see cref="System.Random"/> instance.
