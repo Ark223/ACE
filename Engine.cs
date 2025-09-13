@@ -112,6 +112,9 @@ namespace Ace
             this._iterations = 0L;
             this._elapsed = TimeSpan.Zero;
 
+            // Determine a new side from game leader
+            this._side = ((int)this._game.Leader) & 1;
+
             // Reset everything
             if (hard_reset)
             {
@@ -125,9 +128,6 @@ namespace Ace
                 this._tree = new Tree();
                 return true;
             }
-
-            // Determine a new side from game leader
-            this._side = ((int)this._game.Leader) & 1;
 
             // Soft reset: only continue if tree is filled
             return this._tree != null && !this._tree.IsEmpty;
