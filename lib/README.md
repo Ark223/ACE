@@ -168,7 +168,11 @@ It is also ideal to use it when evaluating moves for the dummy, since the declar
 
 Formula:
 
-$\displaystyle \mathrm{Optimistic}(n) = \max_{c \,\in\, \mathcal{C}(n)} (v_c)$  
+```math
+\begin{aligned}
+{\mathrm{Optimistic}}(n) = \max_{c \, \in \, \mathcal{C}(n)} (v_c)
+\end{aligned}
+```
 
 ### Adversarial
 
@@ -180,7 +184,11 @@ In other words, it answers: "Can I still succeed even if the opponents defend pe
 
 Formula:
 
-$\displaystyle \mathrm{Adversarial}(n) = \min_{c \,\in\, \mathcal{C}(n)} (v_c)$  
+```math
+\begin{aligned}
+{\mathrm{Adversarial}}(n) = \min_{c \, \in \, \mathcal{C}(n)} (v_c)
+\end{aligned}
+```
 
 ### Expectation
 
@@ -191,7 +199,11 @@ This model is mostly used when aiming for long-term results rather than maximizi
 
 Formula:
 
-$\displaystyle \mathrm{Expectation}(n) = \sum_{c \,\in\, \mathcal{C}(n)} (p_c \,\cdot\, v_c)$  
+```math
+\begin{aligned}
+{\mathrm{Expectation}}(n) = \sum_{c \, \in \, \mathcal{C}(n)} (p_c \, \cdot \, v_c)
+\end{aligned}
+```
 
 ### Linear Blend
 
@@ -204,7 +216,18 @@ This model is commonly used when evaluating decisions for both the defending par
 
 Formula:
 
-$\displaystyle \mathrm{B}(n) = \begin{cases} \max_{c \,\in\, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{partner}(n) \\ \min_{c \,\in\, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{opponent}(n) \end{cases} \;\implies\; \mathrm{Blend}_\lambda(n) = (1-\lambda)\,\mathrm{B}(n) + \lambda \sum_{c \,\in\, \mathcal{C}(n)} (p_c \,\cdot\, v_c)$  
+```math
+\begin{aligned}
+\mathrm{B}(n) =
+\begin{cases}
+\displaystyle \max_{c \, \in \, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{partner}(n) \\[3pt]
+\displaystyle \min_{c \, \in \, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{opponent}(n)
+\end{cases}
+\implies
+\mathrm{Blend}_\lambda(n) = 
+(1-\lambda)\,\mathrm{B}(n) + \lambda \sum_{c \, \in \, \mathcal{C}(n)} (p_c \, \cdot \, v_c)
+\end{aligned}
+```
 
 ### Soft Maximum
 
@@ -212,7 +235,17 @@ $\displaystyle \mathrm{B}(n) = \begin{cases} \max_{c \,\in\, \mathcal{C}(n)} (v_
 
 Formula:
 
-$\displaystyle \mathrm{S}(n) = \max_{c \,\in\, \mathcal{C}(n)} \!\left(\tfrac{v_c}{\tau}\right) \;\implies\; \mathrm{SoftMax}_\tau(n) = \mathrm{S}(n) + \tau \,\log\!\Bigg( \sum_{c \,\in\, \mathcal{C}(n)} p_c \, e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$  
+```math
+\begin{aligned}
+\mathrm{S}(n) = \max_{c \, \in \, \mathcal{C}(n)} \left( \frac{v_c}{\tau} \right) 
+\implies
+\mathrm{SoftMax}_\tau(n) =
+\mathrm{S}(n) + \tau \, \log\!\Bigg(
+   \sum_{c \, \in \, \mathcal{C}(n)} 
+   p_c \, e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}}
+\Bigg)
+\end{aligned}
+```
 
 ### Soft Minimum
 
@@ -220,4 +253,14 @@ $\displaystyle \mathrm{S}(n) = \max_{c \,\in\, \mathcal{C}(n)} \!\left(\tfrac{v_
 
 Formula:
 
-$\displaystyle \mathrm{S}(n) = \min_{c \,\in\, \mathcal{C}(n)} \!\left(\tfrac{v_c}{\tau}\right) \;\implies\; \mathrm{SoftMin}_\tau(n) = \mathrm{S}(n) - \tau \,\log\!\Bigg( \sum_{c \,\in\, \mathcal{C}(n)} p_c \, e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$
+```math
+\begin{aligned}
+\mathrm{S}(n) = \min_{c \, \in \, \mathcal{C}(n)} \left( \frac{v_c}{\tau} \right) 
+\implies
+\mathrm{SoftMin}_\tau(n) =
+\mathrm{S}(n) - \tau \, \log\!\Bigg(
+   \sum_{c \, \in \, \mathcal{C}(n)} 
+   p_c \, e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}}
+\Bigg)
+\end{aligned}
+```
