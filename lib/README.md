@@ -204,15 +204,7 @@ This model is commonly used when evaluating decisions for both the defending par
 
 Formula:
 
-$\displaystyle 
-\mathrm{B}(n) =
-\begin{cases}
-\max_{c \,\in\, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{partner}(n) \\[3pt]
-\min_{c \,\in\, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{opponent}(n)
-\end{cases}
-\;\implies\;
-\mathrm{Blend}_\lambda(n) = (1-\lambda)\,\mathrm{B}(n) + \lambda \sum_{c \,\in\, \mathcal{C}(n)} (p_c \,\cdot\, v_c)
-$  
+$\displaystyle \mathrm{B}(n) = \begin{cases} \max_{c \,\in\, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{partner}(n) \\ \min_{c \,\in\, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{opponent}(n) \end{cases} \;\implies\; \mathrm{Blend}_\lambda(n) = (1-\lambda)\,\mathrm{B}(n) + \lambda \sum_{c \,\in\, \mathcal{C}(n)} (p_c \,\cdot\, v_c)$  
 
 ### Soft Maximum
 
@@ -220,15 +212,7 @@ $
 
 Formula:
 
-$\displaystyle 
-\mathrm{S}(n) = \max_{c \,\in\, \mathcal{C}(n)} \!\left(\tfrac{v_c}{\tau}\right) 
-\;\implies\;
-\mathrm{SoftMax}_\tau(n) =
-\mathrm{S}(n) + \tau \,\log\!\Bigg(
-   \sum_{c \,\in\, \mathcal{C}(n)} 
-   p_c \, e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}}
-\Bigg)
-$  
+$\displaystyle \mathrm{S}(n) = \max_{c \,\in\, \mathcal{C}(n)} \!\left(\tfrac{v_c}{\tau}\right) \;\implies\; \mathrm{SoftMax}_\tau(n) = \mathrm{S}(n) + \tau \,\log\!\Bigg( \sum_{c \,\in\, \mathcal{C}(n)} p_c \, e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$  
 
 ### Soft Minimum
 
@@ -236,12 +220,4 @@ $
 
 Formula:
 
-$\displaystyle 
-\mathrm{S}(n) = \min_{c \,\in\, \mathcal{C}(n)} \!\left(\tfrac{v_c}{\tau}\right) 
-\;\implies\;
-\mathrm{SoftMin}_\tau(n) =
-\mathrm{S}(n) - \tau \,\log\!\Bigg(
-   \sum_{c \,\in\, \mathcal{C}(n)} 
-   p_c \, e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}}
-\Bigg)
-$
+$\displaystyle \mathrm{S}(n) = \min_{c \,\in\, \mathcal{C}(n)} \!\left(\tfrac{v_c}{\tau}\right) \;\implies\; \mathrm{SoftMin}_\tau(n) = \mathrm{S}(n) - \tau \,\log\!\Bigg( \sum_{c \,\in\, \mathcal{C}(n)} p_c \, e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$
