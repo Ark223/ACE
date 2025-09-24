@@ -34,10 +34,7 @@
             }
 
             // Cancel ongoing analysis
-            session.Engine.Cancel();
-
-            // Clear any previous output region
-            Output.Clear(); Output.Track();
+            session.Cancel();
 
             // Inform user that the search was cancelled
             Output.Success("Ongoing search cancelled.\n");

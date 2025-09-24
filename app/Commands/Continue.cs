@@ -57,8 +57,8 @@
             // Check that all expected arguments are present
             if (tokens.Length != 5) return this.PrintHelp();
 
-            // Reset search flags before starting a new search
-            session.IsFinishing = session.IsFinished = false;
+            // Reset flags for a new search
+            session.IsFinishing = false;
 
             // Pull out any flags from tokens
             var flags = GetFlags(tokens);
@@ -74,9 +74,6 @@
 
             // Parse the interval from flags, defaulting to 500 ms
             int int_ms = int.TryParse(interval, out var i) ? i : 500;
-
-            // Clear the window
-            Console.Clear();
 
             // Continue the search with given options
             session.Engine.Continue(dur_ms, int_ms);

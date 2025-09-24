@@ -142,8 +142,8 @@
             // Check if search has made a progress
             if (session.Engine.Iterations > 0)
             {
-                // Reset search flags to print evaluation results
-                session.IsFinishing = session.IsFinished = false;
+                // Reset flags to print results
+                session.IsFinishing = false;
 
                 // Directly invoke this event to force it
                 session.OnSearchCompleted(); return true;

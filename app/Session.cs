@@ -7,6 +7,10 @@ namespace Ace.App
     /// </summary>
     internal sealed partial class Session
     {
+        private bool _is_finished = true;
+        private bool _is_finishing = true;
+        private bool _needs_prefix = false;
+
         /// <summary>
         /// The currently loaded game being analyzed or played.
         /// </summary>
@@ -30,12 +34,37 @@ namespace Ace.App
         /// <summary>
         /// Indicates the search is in its final progress phase.
         /// </summary>
-        internal bool IsFinishing { get; set; } = true;
+        internal bool IsFinishing
+        {
+            get => this._is_finishing;
+            set
+            {
+                this._is_finishing = value;
+                if (!value) this.ResetFlags();
+            }
+        }
 
         /// <summary>
         /// Indicates the engine has just completed the search.
         /// </summary>
-        internal bool IsFinished { get; set; } = true;
+        internal bool IsFinished
+        {
+            get => this._is_finished;
+            set
+            {
+                this._is_finished = value;
+                this._needs_prefix = false;
+            }
+        }
+
+        /// <summary>
+        /// Resets flags when a new search starts.
+        /// </summary>
+        private void ResetFlags()
+        {
+            this._is_finished = false;
+            this._needs_prefix = false;
+        }
     }
 
     internal sealed partial class Session
@@ -51,6 +80,16 @@ namespace Ace.App
             // Holds evaluation results for moves
             Dictionary<Card, double>? eval = null;
 
+            // Add a double newline only after the first progress update
+            string prefix = this._needs_prefix ? "\n\n" : string.Empty;
+
+            // Display the current progress duration in milliseconds
+            TimeSpan elapsed = this.Engine?.Elapsed ?? TimeSpan.Zero;
+            Output.Info($"{prefix}Elapsed\n{elapsed.TotalMilliseconds}ms");
+
+            // Display number of search iterations performed so far
+            Output.Info($"\nIterations\n{this.Engine?.Iterations}");
+
             // Make sure both models are set before evaluation
             if (this.Opponent != null && this.Partner != null)
             {
@@ -58,15 +97,9 @@ namespace Ace.App
                 eval = this.Engine?.Evaluate(this.Opponent, this.Partner);
             }
 
-            // Clear all previous results
-            Output.Clear(); Output.Track();
-
             // Print results if table is filled
             if (eval != null && eval.Count > 0)
             {
-                // Display number of search iterations performed so far
-                Output.Info($"Iterations\n{this.Engine?.Iterations}");
-
                 // Display the column headers for evaluation results
                 Output.Info("\nMove" + new string(' ', 3) + "Score");
 
@@ -77,17 +110,14 @@ namespace Ace.App
                 }
             }
 
-            // Extra line for clarity
-            Output.Info("");
+            // Add spacing before next output block
+            this._needs_prefix = true; Output.Info("");
 
             // Print completion message if we are in the final phase
             if (this.IsFinishing) Output.Success("Task completed.\n");
 
             // Mark search as finished on the last update
             if (this.IsFinishing) this.IsFinished = true;
-
-            // Reset tracker if search is finished
-            if (this.IsFinished) Output.Reset();
 
             // Print next prompt
             Output.Prompt();
@@ -101,6 +131,16 @@ namespace Ace.App
             this.IsFinishing = true;
             this.OnProgressChanged();
         };
+
+        /// <summary>
+        /// Cancels the ongoing search and resets session state.
+        /// </summary>
+        internal void Cancel()
+        {
+            this._is_finishing = true;
+            this._needs_prefix = false;
+            this.Engine?.Cancel();
+        }
 
         /// <summary>
         /// Initializes the engine with the specified number of threads.

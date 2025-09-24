@@ -58,8 +58,8 @@
             // Check that all expected arguments are present
             if (tokens.Length != 7) return this.PrintHelp();
 
-            // Reset search flags before starting a new search
-            session.IsFinishing = session.IsFinished = false;
+            // Reset flags for a new search
+            session.IsFinishing = false;
 
             // Pull out any flags from tokens
             var flags = GetFlags(tokens);
@@ -81,9 +81,6 @@
 
             // Parse the search depth from flags, defaulting to 1
             int plies = int.TryParse(depth, out var p) ? p : 1;
-
-            // Clear the window
-            Console.Clear();
 
             // Start the new tree search with given options
             session.Engine.Search(dur_ms, int_ms, plies);
