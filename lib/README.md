@@ -168,11 +168,7 @@ It is also ideal to use it when evaluating moves for the dummy, since the declar
 
 Formula:
 
-```math
-\begin{aligned}
-{\mathrm{Optimistic}}(n) = \max_{c \, \in \, \mathcal{C}(n)} (v_c)
-\end{aligned}
-```
+$\displaystyle \mathrm{Optimistic}(n) = \max_{c \in \mathcal{C}(n)} (v_c)$  
 
 ### Adversarial
 
@@ -184,11 +180,7 @@ In other words, it answers: "Can I still succeed even if the opponents defend pe
 
 Formula:
 
-```math
-\begin{aligned}
-{\mathrm{Adversarial}}(n) = \min_{c \, \in \, \mathcal{C}(n)} (v_c)
-\end{aligned}
-```
+$\displaystyle \mathrm{Adversarial}(n) = \min_{c \in \mathcal{C}(n)} (v_c)$  
 
 ### Expectation
 
@@ -199,11 +191,7 @@ This model is mostly used when aiming for long-term results rather than maximizi
 
 Formula:
 
-```math
-\begin{aligned}
-{\mathrm{Expectation}}(n) = \sum_{c \, \in \, \mathcal{C}(n)} (p_c \, \cdot \, v_c)
-\end{aligned}
-```
+$\displaystyle \mathrm{Expectation}(n) = \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$  
 
 ### Linear Blend
 
@@ -214,20 +202,15 @@ Both components are blended using a tunable parameter <code>λ</code>, which con
 Its flexibility makes it ideal for simulating realistic play, where players balance safety with potential reward.  
 This model is commonly used when evaluating decisions for both the defending partner and the opponents.
 
-Formula:
+Formula for partner's model:
 
-```math
-\begin{aligned}
-\mathrm{B}(n) =
-\begin{cases}
-\displaystyle \max_{c \, \in \, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{partner}(n) \\[3pt]
-\displaystyle \min_{c \, \in \, \mathcal{C}(n)} (v_c), & \text{if } \mathrm{opponent}(n)
-\end{cases}
-\implies
-\mathrm{Blend}_\lambda(n) = 
-(1-\lambda)\,\mathrm{B}(n) + \lambda \sum_{c \, \in \, \mathcal{C}(n)} (p_c \, \cdot \, v_c)
-\end{aligned}
-```
+$\displaystyle \mathrm{B}(n) = \max_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^+(n, \lambda) = (1-\lambda)
+\mathrm{B}(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$
+
+Formula for opponent model:
+
+$\displaystyle \mathrm{B}(n) = \min_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^-(n, \lambda) = (1-\lambda)
+\mathrm{B}(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$  
 
 ### Soft Maximum
 
@@ -235,17 +218,8 @@ Formula:
 
 Formula:
 
-```math
-\begin{aligned}
-\mathrm{S}(n) = \max_{c \, \in \, \mathcal{C}(n)} \left( \frac{v_c}{\tau} \right) 
-\implies
-\mathrm{SoftMax}_\tau(n) =
-\mathrm{S}(n) + \tau \, \log\!\Bigg(
-   \sum_{c \, \in \, \mathcal{C}(n)} 
-   p_c \, e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}}
-\Bigg)
-\end{aligned}
-```
+$\displaystyle \mathrm{S}(n) = \max_{c \in \mathcal{C}(n)} \left(\tfrac{v_c}{\tau}\right) \implies \text{SoftMax}(n, \tau) =
+\mathrm{S}(n) + \tau \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$  
 
 ### Soft Minimum
 
@@ -253,14 +227,5 @@ Formula:
 
 Formula:
 
-```math
-\begin{aligned}
-\mathrm{S}(n) = \min_{c \, \in \, \mathcal{C}(n)} \left( \frac{v_c}{\tau} \right) 
-\implies
-\mathrm{SoftMin}_\tau(n) =
-\mathrm{S}(n) - \tau \, \log\!\Bigg(
-   \sum_{c \, \in \, \mathcal{C}(n)} 
-   p_c \, e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}}
-\Bigg)
-\end{aligned}
-```
+$\displaystyle \mathrm{S}(n) = \min_{c \in \mathcal{C}(n)} \left(\tfrac{v_c}{\tau}\right) \implies \text{SoftMin}(n, \tau) =
+\mathrm{S}(n) - \tau \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$
