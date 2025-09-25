@@ -204,11 +204,11 @@ This model is commonly used when evaluating decisions for both the defending par
 
 Formulas depending on the side being investigated:
 
-$\displaystyle \mathrm{B}(n) = \max_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^+(n, \lambda) = (1-\lambda)
-\mathrm{B}(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$
+$\displaystyle \mathrm{B}^+(n) = \max_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^+(n, \lambda) = (1-\lambda)
+\mathrm{B}^+(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$
 
-$\displaystyle \mathrm{B}(n) = \min_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^-(n, \lambda) = (1-\lambda)
-\mathrm{B}(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$  
+$\displaystyle \mathrm{B}^-(n) = \min_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^-(n, \lambda) = (1-\lambda)
+\mathrm{B}^-(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$  
 
 ### Soft Maximum
 
