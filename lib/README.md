@@ -202,7 +202,7 @@ Both components are blended using a tunable parameter <code>λ</code>, which con
 Its flexibility makes it ideal for simulating realistic play, where players balance safety with potential reward.  
 This model is commonly used when evaluating decisions for both the defending partner and the opponents.
 
-Formulas depending on investigated side:
+Formulas depending on the side being investigated:
 
 $\displaystyle \mathrm{B}(n) = \max_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^+(n, \lambda) = (1-\lambda)
 \mathrm{B}(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$
