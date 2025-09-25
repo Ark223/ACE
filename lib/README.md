@@ -217,7 +217,7 @@ $\displaystyle \mathrm{B}^-(n) = \min_{c \in \mathcal{C}(n)} (v_c) \implies \tex
 Formula:
 
 $\displaystyle \mathrm{S}(n) = \max_{c \in \mathcal{C}(n)} \left(\tfrac{v_c}{\tau}\right) \implies \text{SoftMax}(n, \tau) =
-\mathrm{S}(n) + \tau \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$  
+\mathrm{S}(n) + \tau \cdot \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$  
 
 ### Soft Minimum
 
@@ -226,4 +226,4 @@ $\displaystyle \mathrm{S}(n) = \max_{c \in \mathcal{C}(n)} \left(\tfrac{v_c}{\ta
 Formula:
 
 $\displaystyle \mathrm{S}(n) = \min_{c \in \mathcal{C}(n)} \left(\tfrac{v_c}{\tau}\right) \implies \text{SoftMin}(n, \tau) =
-\mathrm{S}(n) - \tau \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$
+\mathrm{S}(n) - \tau \cdot \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$
