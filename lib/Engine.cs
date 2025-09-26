@@ -255,17 +255,14 @@ namespace Ace
             }
             catch (OperationCanceledException) {}
 
-            // Notify listeners with the final progress update
-            this.Trigger(this.ProgressChanged, stopwatch.Elapsed);
-
-            // Notify listeners that the search has been completed
-            this.Trigger(this.SearchCompleted, stopwatch.Elapsed);
+            // Stop the timer
+            stopwatch.Stop();
 
             // Clean up resources related to token
             this._cts.Dispose(); this._cts = null;
-            
-            // Stop the timer
-            stopwatch.Stop();
+
+            // Notify listeners that the search has been completed
+            this.Trigger(this.SearchCompleted, stopwatch.Elapsed);
         }
 
         /// <summary>
