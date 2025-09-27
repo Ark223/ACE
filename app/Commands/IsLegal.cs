@@ -53,7 +53,7 @@
             // Check if the given card is legal
             if (!session.Game.IsLegal(card))
             {
-                // Notify the user if that this card is not a legal move
+                // Notify the user that this card is not a legal move
                 return Output.Warning($"{card} is not a legal play.\n");
             }
 
