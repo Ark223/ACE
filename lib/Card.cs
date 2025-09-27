@@ -101,10 +101,10 @@ namespace Ace
         }
 
         /// <summary>
-        /// Safely parses a string (like "7S", "KD", "TC") into a <see cref="Card"/>.
+        /// Safely parses a string (like "S7", "DK", "CT") into a <see cref="Card"/>.
         /// </summary>
-        /// <param name="str">String to parse ("7S", "KD", ...).</param>
-        /// <param name="card">Parsed card if successful.</param>
+        /// <param name="str">String to parse ("S7", "DK", ...).</param>
+        /// <param name="card">Parsed card result if successful.</param>
         /// <returns>True if parse was successful; otherwise, false.</returns>
         public static bool TryParse(string str, out Card card)
         {
@@ -114,16 +114,16 @@ namespace Ace
             if (string.IsNullOrEmpty(str) || str.Length != 2)
                 return false;
 
-            // Pull out the rank and suit as uppercase
+            // Pull out the suit and rank as uppercase
             char ca = char.ToUpperInvariant(str[0]);
             char cb = char.ToUpperInvariant(str[1]);
 
-            // See if the char actually maps to a valid rank
-            if (!RankFromChar.TryGetValue(ca, out var rank))
+            // See if the char actually maps to a valid suit
+            if (!SuitFromChar.TryGetValue(ca, out var suit))
                 return false;
 
-            // Same for the suit — reject if unable to parse
-            if (!SuitFromChar.TryGetValue(cb, out var suit))
+            // Same for the rank — reject if unable to parse
+            if (!RankFromChar.TryGetValue(cb, out var rank))
                 return false;
 
             card = new Card(rank, suit);
@@ -131,14 +131,14 @@ namespace Ace
         }
 
         /// <summary>
-        /// Returns a string representation of the card (e.g., "AS", "TH").
+        /// Returns a string representation of the card (e.g., "SA", "HT").
         /// </summary>
         /// <returns>A two-character string: rank followed by suit.</returns>
         public override string ToString()
         {
-            char rank = RankToChar[this.Rank];
             char suit = SuitToChar[this.Suit];
-            return $"{rank}{suit}";
+            char rank = RankToChar[this.Rank];
+            return $"{suit}{rank}";
         }
 
         /// <summary>

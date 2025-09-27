@@ -181,8 +181,11 @@ namespace Ace
             // Update state key for this play
             if (!trick) this.UpdateKey(card);
 
-            // Record this play in a move history
-            this._history.Add(card.ToString());
+            // Get the card representation
+            string play = card.ToString();
+
+            // Record this card play in a move history
+            this._history.Add($"{play[1]}{play[0]}");
 
             // Finish the trick if 4 cards have been played
             if (this._trick.Count == 4) this.FinishTrick();

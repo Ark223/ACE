@@ -17,7 +17,7 @@
                  -h, --help   Show this message and exit
 
              Example:
-                 play 7S"
+                 play S7"
         ){ }
 
         /// <summary>

@@ -17,7 +17,7 @@
                  -h, --help   Show this message and exit
 
              Example:
-                 islegal 7S"
+                 islegal S7"
         ){ }
 
         /// <summary>

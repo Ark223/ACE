@@ -48,7 +48,7 @@ namespace Ace.App.Commands
             {
                 // Gather the ranks for all legal cards in this suit
                 var cards = moves.Where(card => card.Suit == suit)
-                    .Select(card => card.ToString()[0]).Reverse();
+                    .Select(card => card.ToString()[1]).Reverse();
 
                 // Print the suit and its available cards, e.g. "S AKT", etc.
                 Output.Info($"{suit.ToString()[0]} {string.Concat(cards)}");

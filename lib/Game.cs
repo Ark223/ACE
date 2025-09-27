@@ -39,7 +39,7 @@ namespace Ace
     internal interface IGame
     {
         /// <summary>
-        /// Attempts to play a move specified as a string (e.g., "AS" for Ace of Spades).
+        /// Attempts to play a move specified as a string (e.g., "SA" for Ace of Spades).
         /// </summary>
         /// <param name="move">String representation of the card played.</param>
         /// <param name="check">If true, validates the move before playing.</param>
@@ -532,7 +532,7 @@ namespace Ace
         }
 
         /// <summary>
-        /// Attempts to play a move specified as a string (e.g., "AS" for Ace of Spades).
+        /// Attempts to play a move specified as a string (e.g., "SA" for Ace of Spades).
         /// </summary>
         /// <param name="move">String representation of the card played.</param>
         /// <param name="check">If true, validates the move before playing.</param>

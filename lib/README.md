@@ -48,11 +48,11 @@ Console.WriteLine("Available moves: " + moves);
 You can also check if a particular card is "legal" to play in the current state by using <code>IsLegal</code> method:
 
 ```csharp
-if (!game.IsLegal("AS"))
+if (!game.IsLegal("SA"))
     Console.WriteLine("Ace of Spades is not legal play!");
 ```
 
-Card strings follow the format: rank first, then suit - in this example, <code>"AS"</code> represents the Ace of Spades.  
+Card strings follow the format: suit first, then rank - in this example, <code>"SA"</code> represents the Ace of Spades.  
 Valid suits are: <code>S</code> (Spades), <code>H</code> (Hearts), <code>D</code> (Diamonds), <code>C</code> (Clubs);
 ranks are: <code>A K Q J T 9 8 7 6 5 4 3 2</code>.
 
@@ -63,8 +63,8 @@ ranks are: <code>A K Q J T 9 8 7 6 5 4 3 2</code>.
 Once a game is initialized, you can simulate the play sequence using card strings:
 
 ```csharp
-game.Play("QS"); // East plays Queen of Spades
-game.Play("3S"); // South responds with 3 of Spades
+game.Play("SQ"); // East plays Queen of Spades
+game.Play("S3"); // South responds with 3 of Spades
 ```
 
 It is also possible to undo and redo moves:
@@ -78,8 +78,8 @@ By default, each move is <b>legality-checked</b> (only playable cards are allowe
 To skip this check (e.g. when replaying known sequences), pass false as the second argument:
 
 ```csharp
-game.Play("7S", false); // Bypass legality check for 7S
-game.Play("AS", false); // Bypass check as well for AS
+game.Play("S7", false); // Bypass legality check for S7
+game.Play("SA", false); // Bypass check as well for SA
 ```
 
 To check how many tricks a partnership has won so far, call <code>GetTricks</code> with any player from that pair:
@@ -93,7 +93,7 @@ You can clone the game state to explore different plays independently, without a
 
 ```csharp
 var copy = game.Clone();
-copy.Play("4C", false);
+copy.Play("C4", false);
 ```
 
 ---
