@@ -47,15 +47,18 @@
             // Check that all expected arguments are present
             if (tokens.Length != 2) return this.PrintHelp();
 
+            // Normalize card input to uppercase
+            string card = tokens[1].ToUpper();
+
             // Check if the given card is legal
-            if (!session.Game.IsLegal(tokens[1]))
+            if (!session.Game.IsLegal(card))
             {
-                // Notify the user if the specified card is not a legal play
-                return Output.Warning($"{tokens[1]} is not a legal play.\n");
+                // Notify the user if that this card is not a legal move
+                return Output.Warning($"{card} is not a legal play.\n");
             }
 
-            // Confirm to the user that the card is a legal play
-            Output.Success($"{tokens[1]} is a legal play.\n");
+            // Confirm to user that the card is a legal play
+            Output.Success($"{card} is a legal play.\n");
             return true;
         }
     }

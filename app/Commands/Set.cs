@@ -88,7 +88,7 @@ namespace Ace.App.Commands
             if (tokens.Length < 4) return this.PrintHelp();
 
             // Accept only N, E, S, or W as the valid player value
-            if ((side = "NESW".IndexOf(tokens[1].Trim())) == -1)
+            if ((side = "nesw".IndexOf(tokens[1].ToLower())) == -1)
             {
                 return Output.Error("Player must be one of: N/E/S/W.\n");
             }
@@ -129,7 +129,7 @@ namespace Ace.App.Commands
             foreach (Player play in Enum.GetValues<Player>())
             {
                 var co = session.Game.Constraints[play];
-                Output.Info($"{play,-5}: S {co.Spades} H {co.Hearts}"
+                Output.Info($"{play, -5}: S {co.Spades} H {co.Hearts}"
                     + $" D {co.Diamonds} C {co.Clubs} HCP {co.Hcp}");
             }
 

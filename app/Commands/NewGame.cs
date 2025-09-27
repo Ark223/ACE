@@ -50,7 +50,7 @@ namespace Ace.App.Commands
             string? declarer = Extract(flags, ["-d", "--declarer"]);
 
             // Accept only N, E, S, or W as valid declarer values
-            if (!"NESW".Contains((declarer ?? "N").Trim()))
+            if (!"nesw".Contains((declarer ?? "N").ToLower()))
             {
                 return Output.Error("Declarer must be one of: N/E/S/W.\n");
             }
@@ -64,8 +64,8 @@ namespace Ace.App.Commands
                 return Output.Error("Invalid contract (e.g., 3NT, 4H).\n");
             }
 
-            // Convert the declarer letter (N/E/S/W) into a player
-            Player player = (Player)"NESW".IndexOf(declarer ?? "N");
+            // Convert the declarer letter (N, E, S, or W) into a player value
+            Player player = (Player)"nesw".IndexOf((declarer ?? "N").ToLower());
 
             // Reconstruct the full deal from input and start a new game
             session.NewGame(string.Join(" ", tokens[1..5]), player, result);
