@@ -53,6 +53,7 @@ namespace Ace.App
             set
             {
                 this._is_finished = value;
+                this._is_finishing = value;
                 this._needs_prefix = false;
             }
         }

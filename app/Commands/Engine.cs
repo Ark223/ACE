@@ -7,9 +7,9 @@
     {
         internal Engine() : base
         (
-            "engine", ["ace"],
+            "engine", ["eng", "ace"],
 
-           @"Usage: engine|ace --threads <threads>
+           @"Usage: engine|eng|ace --threads <threads>
 
              Initializes or reconfigures the analysis engine.
 

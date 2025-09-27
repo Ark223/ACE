@@ -9,9 +9,9 @@ namespace Ace.App.Commands
     {
         internal NewGame() : base
         (
-            "newgame", ["new"],
+            "newgame", ["new", "game"],
 
-           @"Usage: newgame|new <deal> --declarer <declarer> --contract <contract>
+           @"Usage: newgame|new|game <deal> --declarer <declarer> --contract <contract>
 
              Starts a new game using the specified PBN deal, declarer, and contract.
 

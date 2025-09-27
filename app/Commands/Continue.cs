@@ -7,9 +7,9 @@
     {
         internal Continue() : base
         (
-            "continue", ["resume"],
+            "continue", ["cont", "resume"],
 
-           @"Usage: continue|resume --duration <ms> --interval <ms>
+           @"Usage: continue|cont|resume --duration <ms> --interval <ms>
 
              Continues the ongoing tree search operation.
 
@@ -19,7 +19,7 @@
                  -h, --help            Show this message and exit
 
              Example:
-                 continue -d 1000 -i 500"
+                 continue -d 5000 -i 1000"
         ){ }
 
         /// <summary>
@@ -77,6 +77,16 @@
 
             // Continue the search with given options
             session.Engine.Continue(dur_ms, int_ms);
+
+            // Check if search actually started
+            if (!session.Engine.IsSearching)
+            {
+                // Inform the user that there is no search to resume
+                Output.Error("No previous search to continue.\n");
+
+                // Mark the session as finished and exit
+                session.IsFinished = true; return true;
+            }
 
             // Notify the user that the search is continued
             Output.Success("Ongoing search continued..\n");

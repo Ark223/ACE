@@ -7,9 +7,9 @@
     {
         internal Search() : base
         (
-            "search", ["sim"],
+            "search", ["sim", "go"],
 
-           @"Usage: search|sim --depth <depth> --duration <ms> --interval <ms>
+           @"Usage: search|sim|go --depth <depth> --duration <ms> --interval <ms>
 
              Starts a new tree search for analysis with the specified options.
 
