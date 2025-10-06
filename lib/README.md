@@ -168,7 +168,7 @@ It is also ideal to use it when evaluating moves for the dummy, since the declar
 
 Formula:
 
-$\displaystyle \mathrm{Optimistic}(n) = \max_{c \in \mathcal{C}(n)} (v_c)$  
+$\displaystyle \mathrm{Optimistic}(n) = \max_{c \in \mathcal{C}(n)} \left(v_c \right)$  
 
 ### Adversarial
 
@@ -180,7 +180,7 @@ In other words, it answers: "Can I still succeed even if the opponents defend pe
 
 Formula:
 
-$\displaystyle \mathrm{Adversarial}(n) = \min_{c \in \mathcal{C}(n)} (v_c)$  
+$\displaystyle \mathrm{Adversarial}(n) = \min_{c \in \mathcal{C}(n)} \left(v_c \right)$  
 
 ### Expectation
 
@@ -191,7 +191,7 @@ This model is mostly used when aiming for long-term results rather than maximizi
 
 Formula:
 
-$\displaystyle \mathrm{Expectation}(n) = \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$  
+$\displaystyle \mathrm{Expectation}(n) = \sum_{c \in \mathcal{C}(n)} \left(p_c \cdot v_c \right)$  
 
 ### Linear Blend
 
@@ -205,10 +205,10 @@ This model is commonly used when evaluating decisions for both the defending par
 Formulas depending on the side being investigated:
 
 $\displaystyle \mathrm{B}^+(n) = \max_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^+(n, \lambda) = (1-\lambda)
-\mathrm{B}^+(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$
+\mathrm{B}^+(n) + \lambda \sum_{c \in \mathcal{C}(n)} \left(p_c \cdot v_c \right)$
 
 $\displaystyle \mathrm{B}^-(n) = \min_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^-(n, \lambda) = (1-\lambda)
-\mathrm{B}^-(n) + \lambda \sum_{c \in \mathcal{C}(n)} (p_c \cdot v_c)$  
+\mathrm{B}^-(n) + \lambda \sum_{c \in \mathcal{C}(n)} \left(p_c \cdot v_c \right)$  
 
 ### Soft Maximum
 
