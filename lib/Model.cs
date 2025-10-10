@@ -46,7 +46,7 @@ namespace Ace
         /// </summary>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
         /// <returns>An opponent model using the specified strategy.</returns>
-        public static Model Expectation(double prior = 1d)
+        public static Model Expectation(double prior = 0d)
         {
             return new ExpectationModel(prior);
         }
@@ -57,7 +57,7 @@ namespace Ace
         /// <param name="lambda">Blend between best-case and average.</param>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
         /// <returns>Evaluation model using the specified strategy.</returns>
-        public static Model LinearBlend(double lambda, double prior = 1d)
+        public static Model LinearBlend(double lambda, double prior = 0d)
         {
             return new LinearBlendModel(lambda, prior);
         }
@@ -68,7 +68,7 @@ namespace Ace
         /// <param name="tau">Adjusts how much to soften the maximum.</param>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
         /// <returns>An own-side model using the specified strategy.</returns>
-        public static Model SoftMax(double tau, double prior = 1d)
+        public static Model SoftMax(double tau, double prior = 0d)
         {
             return new SoftMaxModel(tau, prior);
         }
@@ -79,7 +79,7 @@ namespace Ace
         /// <param name="tau">Adjusts how much to soften the minimum.</param>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
         /// <returns>An opponent model using the specified strategy.</returns>
-        public static Model SoftMin(double tau, double prior = 1d)
+        public static Model SoftMin(double tau, double prior = 0d)
         {
             return new SoftMinModel(tau, prior);
         }
@@ -130,13 +130,13 @@ namespace Ace
     /// </summary>
     internal sealed class ExpectationModel : Model
     {
-        private readonly double _prior = 1d;
+        private readonly double _prior;
 
         /// <summary>
         /// Creates an expectation model with the given smoothing prior.
         /// </summary>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
-        internal ExpectationModel(double prior = 1d)
+        internal ExpectationModel(double prior = 0d)
         {
             this._prior = Math.Max(0d, prior);
         }
@@ -167,7 +167,7 @@ namespace Ace
         /// </summary>
         /// <param name="lambda">Blend between best-case and average.</param>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
-        internal LinearBlendModel(double lambda, double prior = 1d)
+        internal LinearBlendModel(double lambda, double prior = 0d)
         {
             this._lambda = Math.Max(0d, Math.Min(1d, lambda));
             this._prior = Math.Max(0d, prior);
@@ -223,7 +223,7 @@ namespace Ace
         /// </summary>
         /// <param name="tau">Adjusts how much to soften the maximum.</param>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
-        internal SoftMaxModel(double tau, double prior = 1d)
+        internal SoftMaxModel(double tau, double prior = 0d)
         {
             this._tau = Math.Max(1e-6d, tau);
             this._prior = Math.Max(0d, prior);
@@ -241,19 +241,19 @@ namespace Ace
             // Gather all child scores and their probabilities
             foreach (var pair in node.Policy(this._prior))
             {
-                comps.Add((score(pair.child), pair.probability));
+                comps.Add((pair.probability, score(pair.child)));
             }
 
             // Find the largest logit for stability
             double scaled = double.NegativeInfinity;
-            foreach (var (value, probability) in comps)
+            foreach (var (probability, value) in comps)
             {
                 double logit = value / this._tau;
                 if (logit > scaled) scaled = logit;
             }
 
             // Aggregate probability-weighted exponentials
-            foreach (var (value, probability) in comps)
+            foreach (var (probability, value) in comps)
             {
                 double logit = value / this._tau;
                 double exp = Math.Exp(logit - scaled);
@@ -277,7 +277,7 @@ namespace Ace
         /// </summary>
         /// <param name="tau">Adjusts how much to soften the minimum.</param>
         /// <param name="prior">Smoothing for rarely visited moves.</param>
-        internal SoftMinModel(double tau, double prior = 1d)
+        internal SoftMinModel(double tau, double prior = 0d)
         {
             this._tau = Math.Max(1e-6d, tau);
             this._prior = Math.Max(0d, prior);
@@ -295,19 +295,19 @@ namespace Ace
             // Gather all child scores and their probabilities
             foreach (var pair in node.Policy(this._prior))
             {
-                comps.Add((score(pair.child), pair.probability));
+                comps.Add((pair.probability, score(pair.child)));
             }
 
             // Find the largest logit for stability
             double scaled = double.NegativeInfinity;
-            foreach (var (value, probability) in comps)
+            foreach (var (probability, value) in comps)
             {
                 double logit = -value / this._tau;
                 if (logit > scaled) scaled = logit;
             }
 
             // Aggregate probability-weighted exponentials
-            foreach (var (value, probability) in comps)
+            foreach (var (probability, value) in comps)
             {
                 double logit = -value / this._tau;
                 double exp = Math.Exp(logit - scaled);

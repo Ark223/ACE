@@ -27,7 +27,7 @@
                  smin(tau[,prior])   softmin       – Probability-weighted blend (for opponents)
 
              Example:
-                 evaluate --opponent softmax(0.3) --partner optimistic"
+                 evaluate --opponent softmin(0.3) --partner optimistic"
         ){ }
 
         /// <summary>
