@@ -39,8 +39,8 @@
         private static Model Parse(string name, params double[] values)
         {
             // Get model parameters, defaulting to 1 if missing
-            double first = values.Length > 0 ? values[0] : 1d;
-            double second = values.Length > 1 ? values[1] : 1d;
+            double first = values.Length > 0 ? values[0] : 0d;
+            double second = values.Length > 1 ? values[1] : 0d;
 
             // Adversarial; no parameters (always worst-case)
             if (name.Contains("adv")) return Model.Adversarial();
