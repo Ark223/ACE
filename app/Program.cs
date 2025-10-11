@@ -1,5 +1,6 @@
 ﻿using Ace.App.Commands;
 using System.Diagnostics;
+using System.Globalization;
 using Core = Ace.App.Commands.Engine;
 
 namespace Ace.App
@@ -33,7 +34,12 @@ namespace Ace.App
             // Raise priority to high to improve performance
             var process = Process.GetCurrentProcess();
             process.PriorityClass = ProcessPriorityClass.High;
-            
+
+            // Set this culture for consistent number parsing
+            var culture = CultureInfo.InvariantCulture;
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
+
             while (true)
             {
                 // Prompt only when the search is not running
