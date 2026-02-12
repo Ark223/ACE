@@ -120,6 +120,7 @@ namespace Ace
         
         private ulong _hidden;
         private ushort _voids;
+        private Player _dummy;
         private Player _leader;
         private Trick _trick;
 
@@ -213,6 +214,11 @@ namespace Ace
         /// Gets the bitmask indicating, for each player, which suits are void.
         /// </summary>
         internal ushort Voids => this._voids;
+
+        /// <summary>
+        /// Gets the partner of the declarer.
+        /// </summary>
+        public Player Dummy => this._dummy;
 
         /// <summary>
         /// Gets the player currently on lead.
@@ -508,15 +514,16 @@ namespace Ace
         public Game(GameOptions options)
         {
             this._declarer = options.Declarer;
-            this._leader = options.Declarer.Next();
-            this._constraints = options.Constraints;
-            this._contract = options.Contract;
+            this._leader = this._declarer.Next();
+            this._dummy = this._leader.Next();
 
+            this._contract = options.Contract;
+            this._constraints = options.Constraints;
             this._hands = PBN.ParseDeal(options.Deal);
             this._trick = new Trick(this._leader);
+
             this._hidden = this.HiddenSet();
             this._lefts = this.FindLefts();
-
             this._plays = new ulong[4];
             this._taken = new byte[2];
         }

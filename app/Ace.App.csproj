@@ -6,10 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
-    <Version>0.0.6-wip</Version>
-    <FileVersion>0.0.6.0</FileVersion>
-    <AssemblyVersion>0.0.6.0</AssemblyVersion>
-    <InformationalVersion>0.06 WIP</InformationalVersion>
+    <Version>0.0.7-wip</Version>
+    <FileVersion>0.0.7.0</FileVersion>
+    <AssemblyVersion>0.0.7.0</AssemblyVersion>
+    <InformationalVersion>0.07 WIP</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

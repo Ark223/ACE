@@ -84,6 +84,25 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
+        /// Gets the effective search depth for the current position.
+        /// </summary>
+        /// <returns>The total number of plies to search.</returns>
+        private int Depth
+        {
+            get
+            {
+                // Use configured depth if no game attached
+                if (this._game == null) return this._depth;
+
+                // How many cards we have in the trick?
+                int current = this._game.Trick.Count;
+
+                // Search horizon stays within the trick
+                return Math.Max(1, this._depth - current);
+            }
+        }
+
+        /// <summary>
         /// Determines the role of the current leader in this deal.
         /// </summary>
         /// <param name="world">Current deal state to evaluate.</param>
@@ -223,8 +242,11 @@ namespace Ace
             List<Task> workers = new List<Task>(this._threads);
             for (int thread = 0; thread < this._threads; thread++)
             {
+                // Capture a stable copy
+                int worker = thread;
+
                 // Each worker contributes to the shared search tree
-                workers.Add(Task.Run(() => Simulate(token), token));
+                workers.Add(Task.Run(() => Run(token, worker), token));
             }
 
             // Start periodic progress reporting
@@ -266,6 +288,20 @@ namespace Ace
         }
 
         /// <summary>
+        /// Starts a single tree search worker using its own random stream.
+        /// </summary>
+        /// <param name="token">Token for canceling the operation.</param>
+        /// <param name="worker">Worker index used to derive a seed.</param>
+        private void Run(in CancellationToken token, int worker)
+        {
+            // Force each worker to sample different deals deterministically
+            Random.Bind(unchecked(0x5851f42d ^ (worker + 1) * 374761393));
+
+            // Process simulation
+            this.Simulate(token);
+        }
+
+        /// <summary>
         /// Runs simulations to build out the search tree until stopped.
         /// </summary>
         /// <param name="token">Token for canceling the operation.</param>
@@ -289,7 +325,7 @@ namespace Ace
                 this._sampler.Synchronize(ref deal);
 
                 // Start a search simulation from the tree root
-                this.Query(this._tree.Root, ref deal, this._depth);
+                this.Query(this._tree.Root, ref deal, this.Depth);
             }
         }
 
@@ -301,9 +337,6 @@ namespace Ace
         /// <param name="depth">Search depth still remaining.</param>
         private void Query(Node node, ref Deal world, int depth)
         {
-            // Increment visits
-            node.AddVisit();
-
             // Maximum depth has been reached
             if (depth == 0 || world.IsOver())
             {
@@ -315,22 +348,20 @@ namespace Ace
             // Get all legal moves from this state
             List<Card> moves = world.GetMoves();
 
-            // Pick a random move from possible plays
-            Card card = moves[Random.Next(moves.Count)];
+            // Pick a random action from possible plays
+            Card action = moves[Random.Next(moves.Count)];
 
-            // Play the card and advance
-            uint key = world.Play(card);
+            // Play this move and advance
+            Key key = world.Play(action);
 
-            // Look up a child node for played move
-            if (!node.TryGet(card, out Node child))
-            {
-                // Assign player role for this node
-                Role role = this.GetRole(world);
+            // Assign role for the successor
+            Role role = this.GetRole(world);
 
-                // Create a node in the tree for this state
-                child = this._tree.GetOrCreate(key, role);
-                node.AddChild(card, child);
-            }
+            // Lookup or create the successor node by key
+            Node child = this._tree.GetOrCreate(key, role);
+
+            // Update dynamics in this node
+            node.Connect(action, child);
 
             // Continue the search with reduced depth
             this.Query(child, ref world, depth - 1);
@@ -372,7 +403,10 @@ namespace Ace
         /// <param name="interval">Interval for periodic progress update.</param>
         public async Task Continue(int duration, int interval)
         {
+            // Prepare the engine to continue this run
             if (!this.Setup(this._depth, false)) return;
+
+            // Run search for given time, reporting progress periodically
             await this.Execute(duration, interval).ConfigureAwait(false);
         }
 
@@ -384,23 +418,30 @@ namespace Ace
         /// <param name="depth">Maximum search depth per simulation.</param>
         public async Task Search(int duration, int interval, int depth)
         {
+            // Reset everything to start a fresh run for building game tree
             if (!this.Setup(Math.Max(1, Math.Min(3, depth)), true)) return;
+
+            // Run search for given time, reporting progress periodically
             await this.Execute(duration, interval).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Returns the evaluation results for each move available from player.
         /// </summary>
-        /// <param name="opponent">Evaluation model for opponent side.</param>
-        /// <param name="partner">Evaluation model for partner/our side.</param>
+        /// <param name="prior">Smoothing for more stable estimated values.</param>
         /// <returns>A mapping from each card to its evaluation result.</returns>
-        public Evaluation Evaluate(in Model opponent, in Model partner = null)
+        public Evaluation Evaluate(double prior = 0d)
         {
+            // Normalize smoothing factor
+            if (prior < 0d) prior = 0d;
+
             lock (this._lock)
             {
-                var model = partner ?? Model.Optimistic();
+                // Unable to evaluate if the tree was not built
                 if (this._tree.IsEmpty) return new Evaluation();
-                return new ISS(this._tree, opponent, model).Solve();
+
+                // Solve the game tree at the current root
+                return new ISS(this._tree, prior).Solve();
             }
         }
     }

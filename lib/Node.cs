@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 namespace Ace
 {
     /// <summary>
-    /// Maps each card to its corresponding child node in the tree.
+    /// Maps each card to its corresponding edge in the tree.
     /// </summary>
-    using Children = ConcurrentDictionary<Card, Node>;
+    using Edges = ConcurrentDictionary<Card, Edge>;
 
     /// <summary>
     /// Associates a unique info-state key with its corresponding node.
     /// </summary>
-    using States = ConcurrentDictionary<uint, Node>;
+    using States = ConcurrentDictionary<Key, Node>;
 
     /// <summary>
     /// Represents the player side or perspective for a corresponding node.
@@ -70,28 +68,92 @@ namespace Ace
         /// <param name="key">Unique info-state key.</param>
         /// <param name="role">Player role (perspective).</param>
         /// <returns>A node associated with provided key.</returns>
-        internal Node GetOrCreate(uint key, Role role)
+        internal Node GetOrCreate(Key key, Role role)
         {
-            // Return the initial info-state
-            if (key == 0u) return this._root;
-
-            // Create new node if key does not exist
-            Node factory(uint _) => new Node(role);
+            Node factory(Key _) => new Node(role);
             return this._states.GetOrAdd(key, factory);
         }
     }
 
     /// <summary>
-    /// Represents a node in the tree, storing statistics and child nodes for moves.
+    /// Represents a single action edge from an info-state node.
+    /// </summary>
+    internal sealed class Edge
+    {
+        private long _total;
+        private readonly ConcurrentDictionary<Node, int> _counts;
+
+        /// <summary>
+        /// Creates a new empty edge with no observed successors yet.
+        /// </summary>
+        internal Edge()
+        {
+            this._counts = new ConcurrentDictionary<Node, int>();
+        }
+
+        /// <summary>
+        /// Gets the number of successor nodes observed for this action.
+        /// </summary>
+        internal int Count => this._counts.Count;
+
+        /// <summary>
+        /// Gets the total number of observed successors for this action.
+        /// </summary>
+        internal long Total => Interlocked.Read(ref this._total);
+
+        /// <summary>
+        /// Records one observed transition outcome to a child node.
+        /// </summary>
+        /// <param name="child">Resulting node for this action.</param>
+        internal void Update(in Node child)
+        {
+            // Update transition ending in this child
+            int factory(Node _, int count) => count + 1;
+            this._counts.AddOrUpdate(child, 1, factory);
+
+            // Increment times this action was taken
+            Interlocked.Increment(ref this._total);
+        }
+
+        /// <summary>
+        /// Returns the probability distribution over successor nodes for this action.
+        /// </summary>
+        /// <param name="prior">Additive smoothing applied to observed successors.</param>
+        /// <returns>A sequence representing the probability for each child node.</returns>
+        internal IEnumerable<(Node child, double probability)> Dynamics(double prior = 0d)
+        {
+            // Freeze counts so enumeration is stable
+            var snapshot = this._counts.ToArray();
+
+            // No observed successors yet
+            int length = snapshot.Length;
+            if (length == 0) yield break;
+
+            // Get number of transitions for this action
+            long total = Interlocked.Read(ref this._total);
+            if (total <= 0) yield break;
+
+            // Include normalization for smoothing
+            double denom = total + prior * length;
+            if (denom <= 0) yield break;
+
+            // Yield each successor with its probability
+            foreach (var (child, count) in snapshot)
+            {
+                double prob = (count + prior) / denom;
+                yield return (child, prob);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Represents a node in the tree, storing statistics and outgoing action edges.
     /// </summary>
     internal sealed partial class Node
     {
-        private long _tricks;
-        private int _winnings;
-        private int _visits;
-
         private readonly Role _role;
-        private readonly Children _children;
+        private readonly Edges _edges;
+        private long _evals, _tricks, _wins;
 
         /// <summary>
         /// Gets the player role (perspective) this node represents.
@@ -99,15 +161,55 @@ namespace Ace
         internal Role Role => this._role;
 
         /// <summary>
-        /// Gets the number of times this node was visited during search.
+        /// Gets the outgoing edges for this node, keyed by the played card.
         /// </summary>
-        internal int Visits => Volatile.Read(ref this._visits);
+        internal IReadOnlyDictionary<Card, Edge> Edges => this._edges;
 
         /// <summary>
-        /// Gets reachable child nodes keyed by the card played.
+        /// Creates a node for the given player role.
         /// </summary>
-        internal IReadOnlyDictionary<Card, Node> Children => this._children;
+        /// <param name="role">Player role.</param>
+        internal Node(in Role role = Role.Self)
+        {
+            this._role = role;
+            this._edges = new Edges();
+        }
 
+        /// <summary>
+        /// Gets or creates a new edge for the given action.
+        /// </summary>
+        /// <param name="action">Action that was played.</param>
+        /// <returns>Edge object associated with action.</returns>
+        internal Edge AddEdge(in Card action)
+        {
+            return this._edges.GetOrAdd(action, _ => new Edge());
+        }
+
+        /// <summary>
+        /// Connects this node to a successor through the given action.
+        /// </summary>
+        /// <param name="action">Action that was played.</param>
+        /// <param name="child">Successor info-state node.</param>
+        internal void Connect(in Card action, in Node child)
+        {
+            this.AddEdge(action).Update(child);
+        }
+
+        /// <summary>
+        /// Records an evaluation result (win and tricks) at this node.
+        /// </summary>
+        /// <param name="win">True if this result is a win.</param>
+        /// <param name="tricks">Number of tricks taken.</param>
+        internal void Insert(bool win, int tricks)
+        {
+            Interlocked.Increment(ref _evals);
+            Interlocked.Add(ref this._tricks, tricks);
+            if (win) Interlocked.Increment(ref this._wins);
+        }
+    }
+
+    internal sealed partial class Node
+    {
         /// <summary>
         /// Gets the average number of tricks from all leaf simulations.
         /// </summary>
@@ -115,9 +217,9 @@ namespace Ace
         {
             get
             {
-                int visits = this.Visits;
+                long evals = Interlocked.Read(ref this._evals);
                 long tricks = Interlocked.Read(ref this._tricks);
-                return visits != 0 ? (double)tricks / visits : 0d;
+                return evals != 0 ? (double)tricks / evals : 0d;
             }
         }
 
@@ -128,103 +230,10 @@ namespace Ace
         {
             get
             {
-                int visits = this.Visits;
-                int winnings = Volatile.Read(ref this._winnings);
-                return visits != 0 ? (double)winnings / visits : 0d;
+                long evals = Interlocked.Read(ref this._evals);
+                long wins = Interlocked.Read(ref this._wins);
+                return evals != 0 ? (double)wins / evals : 0d;
             }
-        }
-
-        /// <summary>
-        /// Creates a node for the given player role.
-        /// </summary>
-        /// <param name="role">Player role.</param>
-        internal Node(in Role role = Role.Self)
-        {
-            this._role = role;
-            this._children = new Children();
-        }
-
-        /// <summary>
-        /// Adds a child node for the given card.
-        /// </summary>
-        /// <param name="card">Card played.</param>
-        /// <param name="node">Child node.</param>
-        internal void AddChild(in Card card, in Node node)
-        {
-            this._children.TryAdd(card, node);
-        }
-
-        /// <summary>
-        /// Increments the visit count.
-        /// </summary>
-        internal void AddVisit()
-        {
-            Interlocked.Increment(ref this._visits);
-        }
-
-        /// <summary>
-        /// Checks if a child node exists for the specified card.
-        /// </summary>
-        /// <param name="card">Card played.</param>
-        /// <returns>True whether the child exists.</returns>
-        internal bool Contains(in Card card)
-        {
-            return this._children.ContainsKey(card);
-        }
-
-        /// <summary>
-        /// Gets the child node for the specified card.
-        /// </summary>
-        /// <param name="card">Card played.</param>
-        /// <returns>A node for the given card.</returns>
-        internal Node GetChild(in Card card)
-        {
-            return this._children[card];
-        }
-
-        /// <summary>
-        /// Records an evaluation result (win and tricks) at this node.
-        /// </summary>
-        /// <param name="win">True if this result is a win.</param>
-        /// <param name="tricks">Number of tricks taken.</param>
-        internal void Insert(bool win, int tricks)
-        {
-            Interlocked.Add(ref this._tricks, tricks);
-            if (win) Interlocked.Increment(ref this._winnings);
-        }
-
-        /// <summary>
-        /// Returns the policy distribution over available moves from this node.
-        /// </summary>
-        /// <param name="prior">Smoothing factor for unseen or low-count moves.</param>
-        /// <returns>A sequence of pairs representing the move distribution.</returns>
-        internal IEnumerable<(Node child, double probability)> Policy(double prior)
-        {
-            int childs = this._children.Count;
-            if (childs == 0) yield break;
-
-            // Count how many times each child has been visited
-            int visits = this._children.Values.Sum(c => c.Visits);
-
-            // Work out the scaling factor so probabilities sum up to 1
-            double scale = 1d / Math.Max(prior * childs + visits, childs);
-
-            // Assign probability to each child node
-            foreach (Node node in this._children.Values)
-            {
-                yield return (node, (node.Visits + prior) * scale);
-            }
-        }
-
-        /// <summary>
-        /// Attempts to get the child node for the specified card.
-        /// </summary>
-        /// <param name="card">Card played.</param>
-        /// <param name="node">Child node if found; otherwise, null.</param>
-        /// <returns>True if the child node exists; otherwise, false.</returns>
-        internal bool TryGet(in Card card, out Node node)
-        {
-            return this._children.TryGetValue(card, out node);
         }
     }
 }

@@ -22,16 +22,6 @@ namespace Ace.App
         internal Engine? Engine { get; private set; }
 
         /// <summary>
-        /// The evaluation model to use for the opponent side.
-        /// </summary>
-        internal Model? Opponent { get; set; }
-
-        /// <summary>
-        /// The evaluation model to use for our partner.
-        /// </summary>
-        internal Model? Partner { get; set; }
-
-        /// <summary>
         /// Indicates the search is in its final progress phase.
         /// </summary>
         internal bool IsFinishing
@@ -78,9 +68,6 @@ namespace Ace.App
             // Skip if search is completed
             if (this.IsFinished) return;
 
-            // Holds evaluation results for moves
-            Dictionary<Card, double>? eval = null;
-
             // Add a double newline only after the first progress update
             string prefix = this._needs_prefix ? "\n\n" : string.Empty;
 
@@ -91,12 +78,8 @@ namespace Ace.App
             // Display number of search iterations performed so far
             Output.Info($"\nIterations\n{this.Engine?.Iterations}");
 
-            // Make sure both models are set before evaluation
-            if (this.Opponent != null && this.Partner != null)
-            {
-                // Evaluate legal moves using the currently set up models
-                eval = this.Engine?.Evaluate(this.Opponent, this.Partner);
-            }
+            // Evaluate the current position using the search tree
+            Dictionary<Card, double>? eval = this.Engine?.Evaluate();
 
             // Print results if table is filled
             if (eval != null && eval.Count > 0)

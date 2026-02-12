@@ -14,15 +14,14 @@ namespace Ace
         private string _pbn;
         private Trick _trick;
         private Player _leader;
+        private int _shift = -8;
+        private uint _key = 0;
 
         private readonly Suit _trump;
         private readonly Player _origin;
         private readonly byte[] _tricks;
         private readonly List<Card>[] _hands;
         private readonly List<string> _history;
-
-        private uint _state_key = 0x811c9dc5u;
-        private readonly uint _prime = 0x01000193u;
 
         /// <summary>
         /// Gets the current hands of all four players.
@@ -67,14 +66,39 @@ namespace Ace
     internal sealed partial class Deal
     {
         /// <summary>
-        /// Updates the state key with the played card.
+        /// Returns a bitmask for the current leader's hand.
         /// </summary>
-        /// <param name="card">Card played.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdateKey(in Card card)
+        /// <returns>A 52-bit mask of the leader's hand.</returns>
+        private ulong HandMask()
         {
-            this._state_key ^= (uint)card.Index();
-            this._state_key *= this._prime;
+            ulong mask = 0ul;
+            var hand = this._hands[(int)this._leader];
+            for (int idx = 0; idx < hand.Count; idx++)
+            {
+                mask |= 1ul << hand[idx].Index();
+            }
+            return mask;
+        }
+
+        /// <summary>
+        /// Computes an info-set key for the current player to act.
+        /// </summary>
+        /// <returns>A key identifying the current infoset.</returns>
+        private Key GetStateKey()
+        {
+            ulong leader = (ulong)this._leader << 52;
+            return new Key(this._key, this.HandMask() | leader);
+        }
+
+        /// <summary>
+        /// Updates the public state key after a card is played.
+        /// </summary>
+        /// <param name="card">Card that was played.</param>
+        /// <param name="player">Player who just acted.</param>
+        private void UpdateKey(in Card card, Player player)
+        {
+            uint played = (uint)card.Index() | ((uint)player << 6);
+            this._key |= played << (this._shift += 8);
         }
 
         /// <summary>
@@ -168,18 +192,18 @@ namespace Ace
         /// Plays a specified card for the current leader.
         /// </summary>
         /// <param name="card">Card to be played.</param>
-        /// <param name="trick">Add card to trick.</param>
-        /// <returns>A new state key after this play.</returns>
-        internal uint Play(in Card card, bool trick = false)
+        /// <param name="replay">Add card to the trick.</param>
+        /// <returns>An info-state key after this play.</returns>
+        internal Key Play(in Card card, bool replay = false)
         {
             // Remove the card from the player’s hand
             this._hands[(int)this._leader].Remove(card);
 
             // Add this card to the current trick
-            if (!trick) this._trick.Insert(card);
+            if (!replay) this._trick.Insert(card);
 
-            // Update state key for this play
-            if (!trick) this.UpdateKey(card);
+            // Update public key with this play
+            this.UpdateKey(card, this._leader);
 
             // Get the card representation
             string play = card.ToString();
@@ -193,8 +217,8 @@ namespace Ace
             // Otherwise, pass lead to the next player
             else this._leader = this._leader.Next();
 
-            // Return a new state key
-            return this._state_key;
+            // Return an info-state key for the next player
+            return !replay ? this.GetStateKey() : Key.Zero;
         }
 
         /// <summary>

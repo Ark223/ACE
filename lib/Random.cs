@@ -8,32 +8,11 @@ namespace Ace
     /// </summary>
     internal class Random
     {
-        /// <summary>
-        /// Thread-local random generator to avoid contention.
-        /// </summary>
         [ThreadStatic]
         private static System.Random _local;
 
         /// <summary>
-        /// Global random generator used to seed thread-local instances.
-        /// </summary>
-        private static readonly System.Random _global;
-
-        /// <summary>
-        /// Global seed used to initialize the thread-local generators.
-        /// </summary>
-        private static readonly int _seed = 0x5851f42d;
-
-        /// <summary>
-        /// Global random generator setup with a fixed seed.
-        /// </summary>
-        static Random()
-        {
-            _global = new System.Random(_seed);
-        }
-
-        /// <summary>
-        /// Gets the thread-local <see cref="System.Random"/> instance.
+        /// Gets the thread-local number generator instance.
         /// </summary>
         private static System.Random Instance
         {
@@ -41,12 +20,19 @@ namespace Ace
             {
                 if (_local == null)
                 {
-                    int seed;
-                    lock (_global) { seed = _global.Next(); }
-                    _local = new System.Random(seed);
+                    _local = new System.Random(0x5851f42d);
                 }
                 return _local;
             }
+        }
+
+        /// <summary>
+        /// Bind a deterministic stream to the current thread.
+        /// </summary>
+        /// <param name="seed">Seed for number generator.</param>
+        internal static void Bind(int seed)
+        {
+            _local = new System.Random(seed);
         }
 
         /// <summary>

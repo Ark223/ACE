@@ -1,10 +1,10 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Ace
 {
     /// <summary>
-    /// Utility extension methods and enums for bridge game.
+    /// Utility extension methods and enums for library.
     /// </summary>
     public static class Extensions
     {
@@ -65,6 +65,20 @@ namespace Ace
         public static Player Advance(this Player player, int steps)
         {
             return (Player)(((int)player + steps) % 4);
+        }
+
+        /// <summary>
+        /// Enables tuple-style deconstruction for key/value pairs.
+        /// </summary>
+        /// <param name="pair">Pair to split into key and value.</param>
+        /// <param name="key">Receives the key from given pair.</param>
+        /// <param name="value">Receives the value from given pair.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Deconstruct<TKey, TValue>(this KeyValuePair
+            <TKey, TValue> pair, out TKey key, out TValue value)
+        {
+            key = pair.Key;
+            value = pair.Value;
         }
     }
 }
