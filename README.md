@@ -14,10 +14,10 @@ outcome - such games remain a persistent challenge in the field of AI.
 One common approach in this domain, especially in card games, is to evaluate many sampled deals
 separately and pick the move that scores highest. However, this leads to <i>strategy fusion</i> -
 a flaw where decisions optimized for each sample fail to form a consistent plan across
-indistinguishable scenarios, often breaking down in real-world gameplay.
+indistinguishable scenarios, often breaking down in real-world cardplay.
 
 ACE mitigates this problem using concepts from the following paper:
-https://ieeexplore.ieee.org/document/6203567
+https://ieeexplore.ieee.org/document/6203567.
 Instead of relying on shallow evaluation of sampled worlds, ACE applies a Monte Carlo tree search
 to explore deeper lines of play, reducing overconfident decisions, limiting bias, and producing
 more robust and human-like outcomes.
