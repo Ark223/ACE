@@ -117,19 +117,14 @@ You can subscribe to the <code>ProgressChanged</code> event to react to intermed
 ```csharp
 engine.ProgressChanged += () =>
 {
-    var results = engine.Evaluate
-    (
-        opponent: Model.SoftMin(tau: 0.3),
-        partner: Model.Optimistic()
-    );
-    Print(results, engine.Iterations);
+    var results = engine.Evaluate();
+    Console.WriteLine(engine.Iterations);
+    Console.WriteLine("\n" + results);
 };
 ```
 
-In this example, we call a user-defined <code>Print</code> method to display evaluation scores and iterations performed.  
-The <code>Evaluate</code> method returns a dictionary mapping each playable card to its current score (<code>&lt;Card, double&gt;</code>).
-
-Each score returned by <code>Evaluate</code> typically falls between <code>0</code> and <code>1</code>,
+The <code>Evaluate</code> method returns a list of <code>Evaluation</code> records containing the move action, value, visits, and depth.  
+Each value returned by <code>Evaluate</code> typically falls between <code>0</code> and <code>1</code>,
 representing the estimated chance of winning.
 
 However, scores can go outside this range:
@@ -142,88 +137,8 @@ The choice of evaluation models is discussed further in the next section of this
 To begin the simulations, call <code>Search</code> function, which runs asynchronously for a given duration:
 
 ```csharp
-engine.Search(duration: 20000, interval: 100, depth: 2);
+engine.Search(duration: 10000, interval: 100, depth: 52);
 ```
 
 It performs a tree search starting from the current state, exploring possible outcomes based on your parameters.  
-You can either wait for completion, or subscribe to the <code>SearchCompleted</code> event to be notified when it finishes.
-
-## Models
-
-ACE supports many evaluation models that control how scores are assigned to playable cards during search.  
-These models are typically assigned to specific players - whether it's ourselves, our partner, or the opponent.
-
-Choosing the right models is crucial as it directly affects how the engine plays, depending on your goal.  
-Some models prioritize consistent performance, while others aim to maximize rewards or minimize risk.
-
-Here is a breakdown of the built-in models supported in ACE:
-
-### Optimistic
-
-The optimistic model evaluates each move by assuming the most favorable outcome across sampled scenarios.  
-It is primarily used when the investigated player (the one making the decision) aims to maximize their reward.
-
-Optimism is especially effective when player has a full knowledge of their hand and seeks out best-case situations.  
-It is also ideal to use it when evaluating moves for the dummy, since the declarer has full control over both hands.
-
-Formula:
-
-$\displaystyle \mathrm{Optimistic}(n) = \max_{c \in \mathcal{C}(n)} \left(v_c \right)$  
-
-### Adversarial
-
-The adversarial model evaluates each move by assuming the opponents will do everything to reduce our success.  
-It selects the worst-case outcome from all sampled scenarios, making pessimistic assumptions about the distribution.
-
-This model is useful when the expected outcome already looks favorable and we want to test how resilient it is.  
-In other words, it answers: "Can I still succeed even if the opponents defend perfectly and the layout is uncertain?"
-
-Formula:
-
-$\displaystyle \mathrm{Adversarial}(n) = \min_{c \in \mathcal{C}(n)} \left(v_c \right)$  
-
-### Expectation
-
-The expectation model assigns a score to each move by averaging its outcomes across all sampled scenarios.  
-Each outcome is weighted by its probability, producing a risk-neutral estimate of the move’s performance.
-
-This model is mostly used when aiming for long-term results rather than maximizing gains or minimizing risks.
-
-Formula:
-
-$\displaystyle \mathrm{Expectation}(n) = \sum_{c \in \mathcal{C}(n)} \left(p_c \cdot v_c \right)$  
-
-### Linear Blend
-
-The linear-blend model combines expectation model with an additional strategy to form a single formula.  
-This second strategy is an extremal estimate - best-case for our partner, or worst-case for the opponent.  
-Both components are blended using a tunable parameter <code>λ</code>, which controls the balance between them.
-
-Its flexibility makes it ideal for simulating realistic play, where players balance safety with potential reward.  
-This model is commonly used when evaluating decisions for both the defending partner and the opponents.
-
-Formulas depending on the side being investigated:
-
-$\displaystyle \mathrm{B}^+(n) = \max_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^+(n, \lambda) = (1-\lambda)
-\mathrm{B}^+(n) + \lambda \sum_{c \in \mathcal{C}(n)} \left(p_c \cdot v_c \right)$
-
-$\displaystyle \mathrm{B}^-(n) = \min_{c \in \mathcal{C}(n)} (v_c) \implies \text{Blend}^-(n, \lambda) = (1-\lambda)
-\mathrm{B}^-(n) + \lambda \sum_{c \in \mathcal{C}(n)} \left(p_c \cdot v_c \right)$  
-
-### Soft Maximum
-
-<b>Experimental model:</b> May not be fully covered in the official release.
-
-Formula:
-
-$\displaystyle \mathrm{S}(n) = \max_{c \in \mathcal{C}(n)} \left(\tfrac{v_c}{\tau}\right) \implies \text{SoftMax}(n, \tau) =
-\mathrm{S}(n) + \tau \cdot \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$  
-
-### Soft Minimum
-
-<b>Experimental model:</b> May not be fully covered in the official release.
-
-Formula:
-
-$\displaystyle \mathrm{S}(n) = \min_{c \in \mathcal{C}(n)} \left(\tfrac{v_c}{\tau}\right) \implies \text{SoftMin}(n, \tau) =
-\mathrm{S}(n) - \tau \cdot \log\Bigg(\sum_{c \in \mathcal{C}(n)} p_c \cdot e^{-\tfrac{v_c - \mathrm{S}(n)}{\tau}} \Bigg)$
+You can either wait for completion or subscribe to the <code>SearchCompleted</code> event to be notified when it finishes.

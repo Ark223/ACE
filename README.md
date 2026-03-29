@@ -11,16 +11,16 @@
 players make decisions without full knowledge of the game state and where chance influences the
 outcome - such games remain a persistent challenge in the field of AI.
 
-One of the core issues in this domain, especially in card games, is <i>strategy fusion</i> -
-a flaw where an engine evaluates many sampled deals separately and picks the move that scores best,
-instead of choosing a plan that works across all indistinguishable scenarios. This often leads to
-decisions that seem promising in simulation but fail in real-world play.
+One common approach in this domain, especially in card games, is to evaluate many sampled deals
+separately and pick the move that scores highest. However, this leads to <i>strategy fusion</i> -
+a flaw where decisions optimized for each sample fail to form a consistent plan across
+indistinguishable scenarios, often breaking down in real-world gameplay.
 
-ACE mitigates this problem by incorporating concepts from the following paper:
-https://arxiv.org/abs/2408.02380.
-Rather than solving each sample with full information upfront, ACE delays the reasoning until
-it is actually justified. This mechanism prevents overconfident decisions, reduces bias, and
-leads to more realistic, human-like decisions.
+ACE mitigates this problem using concepts from the following paper:
+https://ieeexplore.ieee.org/document/6203567
+Instead of relying on shallow evaluation of sampled worlds, ACE applies a Monte Carlo tree search
+to explore deeper lines of play, reducing overconfident decisions, limiting bias, and producing
+more robust and human-like outcomes.
 
 ## Features
 
