@@ -14,14 +14,24 @@ namespace Ace
         private string _pbn;
         private Trick _trick;
         private Player _leader;
-        private int _shift = -8;
-        private uint _key = 0;
+        private List<Card> _moves;
 
         private readonly Suit _trump;
         private readonly Player _origin;
         private readonly byte[] _tricks;
+
         private readonly List<Card>[] _hands;
         private readonly List<string> _history;
+
+        /// <summary>
+        /// Gets the current trick in progress.
+        /// </summary>
+        internal Trick Trick => this._trick;
+
+        /// <summary>
+        /// Gets the player who is currently on lead.
+        /// </summary>
+        internal Player Leader => this._leader;
 
         /// <summary>
         /// Gets the current hands of all four players.
@@ -29,9 +39,12 @@ namespace Ace
         internal List<Card>[] Hands => this._hands;
 
         /// <summary>
-        /// Gets the player who is currently on lead.
+        /// Gets all legal moves in the current position.
         /// </summary>
-        internal Player Leader => this._leader;
+        internal IReadOnlyList<Card> Moves
+        {
+            get => this._moves ?? this.GetMoves();
+        }
 
         /// <summary>
         /// Gets or sets the PBN representation of the deal.
@@ -66,47 +79,11 @@ namespace Ace
     internal sealed partial class Deal
     {
         /// <summary>
-        /// Returns a bitmask for the current leader's hand.
-        /// </summary>
-        /// <returns>A 52-bit mask of the leader's hand.</returns>
-        private ulong HandMask()
-        {
-            ulong mask = 0ul;
-            var hand = this._hands[(int)this._leader];
-            for (int idx = 0; idx < hand.Count; idx++)
-            {
-                mask |= 1ul << hand[idx].Index();
-            }
-            return mask;
-        }
-
-        /// <summary>
-        /// Computes an info-set key for the current player to act.
-        /// </summary>
-        /// <returns>A key identifying the current infoset.</returns>
-        private Key GetStateKey()
-        {
-            ulong leader = (ulong)this._leader << 52;
-            return new Key(this._key, this.HandMask() | leader);
-        }
-
-        /// <summary>
-        /// Updates the public state key after a card is played.
-        /// </summary>
-        /// <param name="card">Card that was played.</param>
-        /// <param name="player">Player who just acted.</param>
-        private void UpdateKey(in Card card, Player player)
-        {
-            uint played = (uint)card.Index() | ((uint)player << 6);
-            this._key |= played << (this._shift += 8);
-        }
-
-        /// <summary>
-        /// Returns the trick-taking priority of a card: trump (2), led suit (1), or other (0).
+        /// Returns the trick-taking priority of the specified card.
         /// </summary>
         /// <param name="card">Card to evaluate.</param>
         /// <param name="lead">The suit led for this trick.</param>
-        /// <returns>2 for trump, 1 for led suit, 0 otherwise.</returns>
+        /// <returns>A card's priority category for this trick.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Priority(in Card card, Suit lead)
         {
@@ -140,6 +117,28 @@ namespace Ace
             this._trick = new Trick(player);
             this._leader = player;
         }
+
+        /// <summary>
+        /// Returns a list of all legal moves available to the current player.
+        /// </summary>
+        /// <returns>
+        /// A list of <see cref="Card"/> objects representing all available plays.
+        /// </returns>
+        private List<Card> GetMoves()
+        {
+            int leader = (int)this._leader;
+            var hand = this._hands[leader];
+
+            // On first lead, any card can be played
+            if (this._trick.Count == 0) return hand;
+
+            // Otherwise, must follow suit if able
+            Suit suit = this._trick.Cards[0].Suit;
+
+            // Filter all cards matching the lead suit
+            var follow = hand.Where(c => c.Suit == suit);
+            return follow.Any() ? follow.ToList() : hand;
+        }
     }
 
     internal sealed partial class Deal
@@ -158,31 +157,9 @@ namespace Ace
         }
 
         /// <summary>
-        /// Returns a list of all legal moves available to the current player.
+        /// Indicates whether the deal is finished and no moves can be made.
         /// </summary>
-        /// <returns>
-        /// A list of <see cref="Card"/> objects representing all available plays.
-        /// </returns>
-        internal List<Card> GetMoves()
-        {
-            int leader = (int)this._leader;
-            ref var hand = ref this._hands[leader];
-
-            // On first lead, any card can be played
-            if (this._trick.Count == 0) return hand;
-
-            // Otherwise, must follow suit if able
-            Suit suit = this._trick.Cards[0].Suit;
-
-            // Filter all cards matching the lead suit
-            var follow = hand.Where(c => c.Suit == suit);
-            return follow.Any() ? follow.ToList() : hand;
-        }
-
-        /// <summary>
-        /// Returns true if the deal is finished and no further moves can be made.
-        /// </summary>
-        /// <returns>True if all player hands are empty; otherwise, false.</returns>
+        /// <returns>True if all hands are empty; otherwise, false.</returns>
         internal bool IsOver()
         {
             return this._hands.All(hand => hand.Count == 0);
@@ -193,22 +170,14 @@ namespace Ace
         /// </summary>
         /// <param name="card">Card to be played.</param>
         /// <param name="replay">Add card to the trick.</param>
-        /// <returns>An info-state key after this play.</returns>
-        internal Key Play(in Card card, bool replay = false)
+        internal void Play(in Card card, bool replay = false)
         {
-            // Remove the card from the player’s hand
+            // Remove this card from the player's hand
             this._hands[(int)this._leader].Remove(card);
-
-            // Add this card to the current trick
-            if (!replay) this._trick.Insert(card);
-
-            // Update public key with this play
-            this.UpdateKey(card, this._leader);
-
-            // Get the card representation
             string play = card.ToString();
 
-            // Record this card play in a move history
+            // Store this play only if required
+            if (!replay) this._trick.Insert(card);
             this._history.Add($"{play[1]}{play[0]}");
 
             // Finish the trick if 4 cards have been played
@@ -217,8 +186,8 @@ namespace Ace
             // Otherwise, pass lead to the next player
             else this._leader = this._leader.Next();
 
-            // Return an info-state key for the next player
-            return !replay ? this.GetStateKey() : Key.Zero;
+            // Refresh cached legal moves after a play
+            if (!replay) this._moves = this.GetMoves();
         }
 
         /// <summary>
@@ -240,7 +209,7 @@ namespace Ace
         /// </summary>
         /// <param name="deal">PBN string representation of all four player hands.</param>
         /// <returns>A number of tricks the leader can take at the current position.</returns>
-        internal int Solve(string deal)
+        internal Dictionary<Card, int> Solve(string deal)
         {
             // Collect all cards played so far in a sequence
             string commands = string.Join(" ", this._history);
@@ -251,28 +220,35 @@ namespace Ace
                 // Replay moves to reach the current deal state
                 if (!commands.Equals("")) dds.Execute(commands);
 
-                // Evaluate position
-                return dds.Tricks();
+                // Evaluate all legal moves from current position with DDS
+                return this.Moves.ToDictionary(c => c, c => dds.Tricks(c));
             }
         }
 
         /// <summary>
-        /// Computes total tricks for the leader’s pair (actual or projected).
+        /// Computes total tricks for the leader's pair (actual or projected).
         /// </summary>
         /// <returns>Tricks won or projected for the leader's side.</returns>
-        internal int Tricks()
+        internal Dictionary<Card, int> Tricks()
         {
-            // Determine sides (0 = NS, 1 = EW)
+            // Track tricks already won by pair
             int side = ((int)this._leader) & 1;
+            int tricks = this._tricks[side];
 
-            // Return tricks won if game has finished
-            if (this.IsOver()) return this._tricks[side];
+            // Save the final trick count at terminal
+            var results = new Dictionary<Card, int>();
+            if (this.IsOver())
+            {
+                results[Card.None] = tricks;
+                return results;
+            }
 
-            // Solve for remaining tricks using DDS
-            int remaining = this.Solve(this._pbn);
-
-            // Calculate total tricks for the side
-            return this._tricks[side] + remaining;
+            // Solve for the remaining tricks using DDS
+            foreach (var entry in this.Solve(this._pbn))
+            {
+                results[entry.Key] = tricks + entry.Value;
+            }
+            return results;
         }
 
         /// <summary>
@@ -304,15 +280,11 @@ namespace Ace
                     // Go through ranks from Ace down to 2
                     for (int rank = 14; rank >= 2; rank--)
                     {
-                        // Check if player has this card
                         if (has_card[(int)suit, rank])
                         {
-                            // Add rank character to the string
                             builder.Append(Card.RankToChar[rank]);
                         }
                     }
-
-                    // Store string for this hand
                     ranks[idx] = builder.ToString();
                 }
 

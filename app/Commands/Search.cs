@@ -9,18 +9,19 @@
         (
             "search", ["sim", "go"],
 
-           @"Usage: search|sim|go --depth <depth> --duration <ms> --interval <ms>
+           @"Usage: search|sim|go --depth <depth> --duration <ms> --interval <ms> --limit <iters>
 
-             Starts a new tree search for analysis with the specified options.
+             Starts a new tree search for game analysis with the specified options.
 
              Options:
-                 -p, --depth <depth>   Maximum search depth per simulation (default: 1)
-                 -d, --duration <ms>   Duration of search in milliseconds (default: 1000)
-                 -i, --interval <ms>   Progress interval in milliseconds (default: 500)
-                 -h, --help            Show this message and exit
+                 -p, --depth <depth>    Maximum search depth per iteration (default: 2)
+                 -d, --duration <ms>    Search duration in milliseconds (default: 1000)
+                 -i, --interval <ms>    Progress interval in milliseconds (default: 500)
+                 -l, --limit <iters>    Total number of iterations allowed (default: inf)
+                 -h, --help             Show this message and exit
 
              Example:
-                 search -p 2 -d 5000 -i 1000"
+                 search -p 52 -d 5000 -i 1000"
         ){ }
 
         /// <summary>
@@ -36,16 +37,13 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first
                 return Output.Error("No game in progress! " +
                     "Start a new game with 'newgame' command.\n");
             }
-
-            // Check if engine is defined
-            if (session.Engine == null)
+            else if (session.Engine == null)
             {
                 // Must inform the user to set up an engine first
                 return Output.Error("Engine not initialized! " +
@@ -54,9 +52,7 @@
 
             // Break the input into tokens for easier parsing
             var tokens = input.Trim().Split([' ', '\t', ':']);
-
-            // Check that all expected arguments are present
-            if (tokens.Length != 7) return this.PrintHelp();
+            if (tokens.Length < 3) return this.PrintHelp();
 
             // Reset flags for a new search
             session.IsFinishing = false;
@@ -64,28 +60,23 @@
             // Pull out any flags from tokens
             var flags = GetFlags(tokens);
 
-            // Retrieve the depth value from the supported flags
-            string? depth = Extract(flags, ["-p", "--depth"]);
-
-            // Retrieve the duration value from the supported flags
+            // Extract optional flags for search configuration
+            string? depth    = Extract(flags, ["-p", "--depth"]);
             string? duration = Extract(flags, ["-d", "--duration"]);
-
-            // Retrieve the interval value from the supported flags
             string? interval = Extract(flags, ["-i", "--interval"]);
+            string? limit    = Extract(flags, ["-l", "--limit"]);
 
-            // Parse the duration from flags, defaulting to 1000 ms
+            // Parse these values into numbers, fall back to defaults
             int dur_ms = int.TryParse(duration, out var d) ? d : 1000;
-
-            // Parse the interval from flags, defaulting to 500 ms
             int int_ms = int.TryParse(interval, out var i) ? i : 500;
+            int iters  = int.TryParse(limit,    out var l) ? l : 0;
+            int plies  = int.TryParse(depth,    out var p) ? p : 52;
 
-            // Parse the search depth from flags, defaulting to 1
-            int plies = int.TryParse(depth, out var p) ? p : 1;
+            // Limit total search iterations when provided
+            if (iters > 0) session.Engine.SetIterations(iters);
 
-            // Start the new tree search with given options
+            // Start new tree search with given options
             session.Engine.Search(dur_ms, int_ms, plies);
-
-            // Notify the user that the tree search has started
             Output.Success($"Search started (depth {plies})..\n");
             return true;
         }

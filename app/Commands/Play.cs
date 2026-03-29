@@ -33,7 +33,6 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first
@@ -43,8 +42,6 @@
 
             // Break the input into tokens for easier parsing
             var tokens = input.Trim().Split([' ', '\t', ':']);
-
-            // Check that all expected arguments are present
             if (tokens.Length != 2) return this.PrintHelp();
 
             // Try to play this card in the current game

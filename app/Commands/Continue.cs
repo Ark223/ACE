@@ -1,4 +1,6 @@
-﻿namespace Ace.App.Commands
+﻿using System.Collections.Generic;
+
+namespace Ace.App.Commands
 {
     /// <summary>
     /// Responds for continuing the ongoing engine search.
@@ -9,14 +11,15 @@
         (
             "continue", ["cont", "resume"],
 
-           @"Usage: continue|cont|resume --duration <ms> --interval <ms>
+           @"Usage: continue|cont|resume --duration <ms> --interval <ms> --limit <iters>
 
              Continues the ongoing tree search operation.
 
              Options:
-                 -d, --duration <ms>   Duration of search in milliseconds (default: 1000)
-                 -i, --interval <ms>   Progress interval in milliseconds (default: 500)
-                 -h, --help            Show this message and exit
+                 -d, --duration <ms>    Search duration in milliseconds (default: 1000)
+                 -i, --interval <ms>    Progress interval in milliseconds (default: 500)
+                 -l, --limit <iters>    Total number of iterations allowed (default: inf)
+                 -h, --help             Show this message and exit
 
              Example:
                  continue -d 5000 -i 1000"
@@ -35,16 +38,13 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first
                 return Output.Error("No game in progress! " +
                     "Start a new game with 'newgame' command.\n");
             }
-
-            // Check if engine is defined
-            if (session.Engine == null)
+            else if (session.Engine == null)
             {
                 // Must inform the user to set up an engine first
                 return Output.Error("Engine is not ready yet! " +
@@ -53,9 +53,7 @@
 
             // Break the input into tokens for easier parsing
             var tokens = input.Trim().Split([' ', '\t', ':']);
-
-            // Check that all expected arguments are present
-            if (tokens.Length != 5) return this.PrintHelp();
+            if (tokens.Length < 3) return this.PrintHelp();
 
             // Reset flags for a new search
             session.IsFinishing = false;
@@ -63,34 +61,31 @@
             // Pull out any flags from tokens
             var flags = GetFlags(tokens);
 
-            // Retrieve the duration value from the supported flags
+            // Extract optional flags for search configuration
             string? duration = Extract(flags, ["-d", "--duration"]);
-
-            // Retrieve the interval value from the supported flags
             string? interval = Extract(flags, ["-i", "--interval"]);
+            string? limit    = Extract(flags, ["-l", "--limit"]);
 
-            // Parse the duration from flags, defaulting to 1000 ms
+            // Parse these values into numbers, fall back to defaults
             int dur_ms = int.TryParse(duration, out var d) ? d : 1000;
-
-            // Parse the interval from flags, defaulting to 500 ms
             int int_ms = int.TryParse(interval, out var i) ? i : 500;
+            int iters  = int.TryParse(limit,    out var l) ? l : 0;
 
-            // Continue the search with given options
+            // Limit total search iterations when provided
+            if (iters > 0) session.Engine.SetIterations(iters);
+
+            // Continue tree search with given options
             session.Engine.Continue(dur_ms, int_ms);
 
             // Check if search actually started
             if (!session.Engine.IsSearching)
             {
-                // Inform the user that there is no search to resume
                 Output.Error("No previous search to continue.\n");
-
-                // Mark the session as finished and exit
                 session.IsFinished = true; return true;
             }
 
-            // Notify the user that the search is continued
-            Output.Success("Ongoing search continued..\n");
-            return true;
+            // Notify the user that the search is being continued
+            return Output.Success("Ongoing search continued..\n");
         }
     }
 }

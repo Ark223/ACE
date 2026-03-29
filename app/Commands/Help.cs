@@ -44,11 +44,8 @@
         /// <param name="input">Input string after the prompt.</param>
         internal override bool Execute(Session session, string input)
         {
-            // Ignore if a search is in progress
-            if (!session.IsFinished) return true;
-
-            // Just print help and return
-            this.PrintHelp(); return true;
+            if (session.IsFinished) this.PrintHelp();
+            return true;
         }
     }
 }

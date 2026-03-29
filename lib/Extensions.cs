@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Ace
 {
@@ -9,6 +9,16 @@ namespace Ace
     public static class Extensions
     {
         /// <summary>
+        /// Represents the metric to rank score results.
+        /// </summary>
+        public enum Metric : int
+        {
+            Lcb    = 0,
+            Value  = 1,
+            Visits = 2
+        }
+
+        /// <summary>
         /// Represents a player seat at the bridge table.
         /// </summary>
         public enum Player : int
@@ -17,6 +27,15 @@ namespace Ace
             East  = 1,
             South = 2,
             West  = 3
+        }
+
+        /// <summary>
+        /// Represents a partnership at the bridge table.
+        /// </summary>
+        public enum Side : int
+        {
+            NorthSouth = 0,
+            EastWest   = 1
         }
 
         /// <summary>
@@ -35,7 +54,7 @@ namespace Ace
         /// Returns the next player in clockwise order.
         /// </summary>
         /// <param name="player">Current player.</param>
-        /// <returns>Next player.</returns>
+        /// <returns>Next player to the left.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Player Next(this Player player)
         {
@@ -46,7 +65,7 @@ namespace Ace
         /// Returns the previous player in counter-clockwise order.
         /// </summary>
         /// <param name="player">Current player.</param>
-        /// <returns>Previous player.</returns>
+        /// <returns>Previous player to the right.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Player Prev(this Player player)
         {
@@ -54,9 +73,9 @@ namespace Ace
         }
 
         /// <summary>
-        /// Returns the player seated a given number of seats after the current player.
+        /// Returns the player a given number of seats after the current player.
         /// </summary>
-        /// <param name="player">Starting player.</param>
+        /// <param name="player">Player to start from.</param>
         /// <param name="steps">Number of seats to advance.</param>
         /// <returns>
         /// A player after advancing the specified number of seats.
@@ -68,17 +87,37 @@ namespace Ace
         }
 
         /// <summary>
-        /// Enables tuple-style deconstruction for key/value pairs.
+        /// Returns the partnership the specified player belongs to.
         /// </summary>
-        /// <param name="pair">Pair to split into key and value.</param>
-        /// <param name="key">Receives the key from given pair.</param>
-        /// <param name="value">Receives the value from given pair.</param>
+        /// <param name="player">The player to evaluate.</param>
+        /// <returns>The side corresponding to the given player.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Deconstruct<TKey, TValue>(this KeyValuePair
-            <TKey, TValue> pair, out TKey key, out TValue value)
+        public static Side ToSide(this Player player)
         {
-            key = pair.Key;
-            value = pair.Value;
+            return (Side)((int)player & 1);
+        }
+
+        /// <summary>
+        /// Atomically updates the target to the maximum value.
+        /// </summary>
+        /// <param name="target">The value to update.</param>
+        /// <param name="value">The candidate maximum value.</param>
+        /// <returns>The resulting value after the operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Maximum(ref int target, int value)
+        {
+            int current = target;
+            while (current < value)
+            {
+                // Try to set target if it was unchanged
+                int prior = Interlocked.CompareExchange(
+                    ref target, value, current);
+
+                // Return or retry with updated one
+                if (prior == current) return value;
+                current = prior;
+            }
+            return current;
         }
     }
 }

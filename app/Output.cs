@@ -6,7 +6,7 @@
     internal static class Output
     {
         /// <summary>
-        /// Prints a standard message and optionally tracks lines.
+        /// Prints a standard message with a gray prefix.
         /// </summary>
         internal static bool Info(string message)
         {

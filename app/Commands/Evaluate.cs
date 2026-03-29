@@ -30,7 +30,6 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if engine is defined
             if (session.Engine == null)
             {
                 // Must inform the user to set up an engine first

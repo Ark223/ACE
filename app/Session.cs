@@ -78,29 +78,22 @@ namespace Ace.App
             // Display number of search iterations performed so far
             Output.Info($"\nIterations\n{this.Engine?.Iterations}");
 
-            // Evaluate the current position using the search tree
-            Dictionary<Card, double>? eval = this.Engine?.Evaluate();
-
-            // Print results if table is filled
+            // Evaluate available moves from this position
+            List<Evaluation>? eval = this.Engine?.Evaluate();
             if (eval != null && eval.Count > 0)
             {
-                // Display the column headers for evaluation results
-                Output.Info("\nMove" + new string(' ', 3) + "Score");
+                // Display the column headers for all evaluation results in order
+                Output.Info($"\n{"Move",-6} {"Value",9} {"Visits",8} {"Depth",7}");
 
-                // Show each move and its score, sorted from best to worst
-                foreach (var (move, score) in eval.OrderBy(kv => -kv.Value))
-                {
-                    Output.Info($"{move, -6} {score, 8:F6}");
-                }
+                // Show each move and its stats, sorted from best to worst
+                foreach (var stats in eval) Output.Info(stats.ToString());
             }
 
             // Add spacing before next output block
             this._needs_prefix = true; Output.Info("");
 
-            // Print completion message if we are in the final phase
+            // Mark search as finished on the last update and print
             if (this.IsFinishing) Output.Success("Task completed.\n");
-
-            // Mark search as finished on the last update
             if (this.IsFinishing) this.IsFinished = true;
 
             // Print next prompt

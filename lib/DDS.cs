@@ -27,6 +27,9 @@ namespace Ace
 
             [DllImport("libbcalcdds", CallingConvention = CallingConvention.Cdecl)]
             internal static extern int bcalcDDS_getTricksToTake(IntPtr solver);
+
+            [DllImport("libbcalcdds", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+            internal static extern int bcalcDDS_getTricksToTakeEx(IntPtr solver, int tricks_target, string card);
         }
 
         /// <summary>
@@ -65,6 +68,27 @@ namespace Ace
         internal int Tricks()
         {
             return Solver.bcalcDDS_getTricksToTake(this._instance);
+        }
+
+        /// <summary>
+        /// Gets how many tricks the leader's side can win after forcing a specific card.
+        /// </summary>
+        /// <param name="card">Card string in DDS format (suit first, then rank).</param>
+        /// <returns>A number of tricks available after that card is played.</returns>
+        internal int Tricks(string card)
+        {
+            return Solver.bcalcDDS_getTricksToTakeEx(this._instance, -1, card);
+        }
+
+        /// <summary>
+        /// Gets how many tricks the leader's side can win after forcing a specific card.
+        /// </summary>
+        /// <param name="card">Card to test, further converted to engine format.</param>
+        /// <returns>A number of tricks available after that card is played.</returns>
+        internal int Tricks(in Card card)
+        {
+            string str = card.ToString();
+            return this.Tricks($"{str[1]}{str[0]}");
         }
 
         /// <summary>

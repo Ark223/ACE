@@ -56,6 +56,15 @@ namespace Ace
         }
 
         /// <summary>
+        /// Returns a random floating number in the [0, 1) range.
+        /// </summary>
+        /// <returns>A random value in specified range.</returns>
+        internal static double NextDouble()
+        {
+            return Instance.NextDouble();
+        }
+
+        /// <summary>
         /// Shuffles a list in-place using Fisher-Yates method.
         /// </summary>
         /// <typeparam name="T">Element type.</typeparam>

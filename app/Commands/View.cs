@@ -27,7 +27,6 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first

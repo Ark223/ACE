@@ -8,27 +8,56 @@ using static Ace.Extensions;
 namespace Ace
 {
     /// <summary>
-    /// Represents evaluation scores for all legal moves.
+    /// Provides configuration settings for the tree search algorithm.
     /// </summary>
-    using Evaluation = Dictionary<Card, double>;
+    public sealed class Config
+    {
+        /// <summary>
+        /// Exploration constant that balances search depth and breadth.
+        /// </summary>
+        /// <remarks>
+        /// Higher values encourage more exploration of less-visited nodes,<br>
+        /// </br>while lower values favor exploitation of the best-known nodes.
+        /// </remarks>
+        public double Exploration { get; set; } = 0.6061d;
+
+        /// <summary>
+        /// Controls whether the search is restricted to the current trick.
+        /// </summary>
+        /// <remarks>
+        /// When enabled, the search tree grows within the ongoing trick,<br>
+        /// </br>while when disabled it may also expand across multiple tricks.
+        /// </remarks>
+        public bool Limiter { get; set; } = false;
+
+        /// <summary>
+        /// Metric used to sort candidate moves based on search results.
+        /// </summary>
+        /// <remarks>
+        /// Ranking by value selects moves with the highest winning score,<br>
+        /// </br>while ranking by visits favors moves explored most frequently.
+        /// </remarks>
+        public Metric Metric { get; set; } = Metric.Lcb;
+    }
 
     /// <summary>
     /// Represents the core game-solving engine for analyzing bridge games.
     /// </summary>
     public sealed partial class Engine
     {
-        private int _side;
         private Game _game;
-        private Tree _tree;
+        private Node _root;
+        private Side _side;
+        private Config _config;
         private Sampler _sampler;
 
         private int _depth;
         private long _max_iters;
         private long _iterations;
         private TimeSpan _elapsed;
+        private int _seed = 0x5851f42d;
 
         private readonly int _threads;
-        private readonly object _lock;
         private CancellationTokenSource _cts;
         private readonly SynchronizationContext _context;
 
@@ -41,6 +70,11 @@ namespace Ace
         /// Event fired when the search has finished running.
         /// </summary>
         public event Action SearchCompleted;
+
+        /// <summary>
+        /// Gets the configuration currently used by the engine.
+        /// </summary>
+        public Config Config => this._config;
 
         /// <summary>
         /// Gets the total elapsed time of the search operation.
@@ -63,7 +97,6 @@ namespace Ace
         /// <param name="threads">Number of the search threads.</param>
         public Engine(int threads)
         {
-            this._lock = new object();
             this._elapsed = TimeSpan.Zero;
             this._max_iters = long.MaxValue;
             this._threads = Math.Max(1, threads);
@@ -84,56 +117,92 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
-        /// Gets the effective search depth for the current position.
+        /// Evaluates whether the investigated partnership can achieve their objective:<br></br>
+        /// either making the contract (declarer's side) or setting the contract (defenders).<br></br>
+        /// Also returns the number of tricks available to the leader's partnership in this state.
         /// </summary>
-        /// <returns>The total number of plies to search.</returns>
-        private int Depth
+        /// <param name="world">Deal state to evaluate, representing a possible game scenario.</param>
+        /// <returns>True if the evaluated partnership can succeed, and their number of tricks.</returns>
+        private IReadOnlyDictionary<Card, Outcome> Evaluate(in Deal world)
         {
-            get
+            // Determine leader side in world state
+            int world_side = ((int)world.Leader) & 1;
+
+            // Determine side of the game contract declarer
+            int dec_side = ((int)this._game.Declarer) & 1;
+
+            // Are we evaluating from declarer's side?
+            bool declarer = (int)this._side == dec_side;
+
+            // Store evaluation outcome for each candidate
+            var evals = new Dictionary<Card, Outcome>();
+            Dictionary<Card, int> dds = world.Tricks();
+
+            // Iterate over playable cards or a terminal
+            foreach (Card move in world.Moves.Count > 0 ?
+                world.Moves : new List<Card> { Card.None })
             {
-                // Use configured depth if no game attached
-                if (this._game == null) return this._depth;
+                // Set tricks to current leader
+                int[] tricks = new int[2];
+                tricks[world_side] = dds[move];
 
-                // How many cards we have in the trick?
-                int current = this._game.Trick.Count;
+                // Assign remaining tricks to the opposite side
+                tricks[1 - world_side] = 13 - tricks[world_side];
 
-                // Search horizon stays within the trick
-                return Math.Max(1, this._depth - current);
+                // Assess whether the contract is made or set
+                int required = 6 + this._game.Contract.Level;
+                bool can_make = tricks[dec_side] >= required;
+                bool can_set = tricks[dec_side] < required;
+
+                // Evaluate if our partnership can achieve goal
+                int score = tricks[(int)this._side] - required;
+                evals[move] = new Outcome(declarer ? can_make :
+                    can_set, Math.Min(13, score), this._side);
             }
+            return evals;
         }
 
         /// <summary>
-        /// Determines the role of the current leader in this deal.
+        /// Updates the search tree after a specific move is played.
         /// </summary>
-        /// <param name="world">Current deal state to evaluate.</param>
-        /// <returns>A role for the currently leading player.</returns>
-        private Role GetRole(in Deal world)
+        /// <param name="card">Card that was played in a game.</param>
+        private void OnMovePlayed(Card card)
         {
-            // Retrieve player at the root
-            Player root = this._game.Leader;
+            // No tree to update so ignore
+            if (this._root == null) return;
 
-            // If leader matches root, it's our move
-            if (root == world.Leader) return Role.Self;
+            // Reset root when tree reuse is not applicable
+            if (this._depth < 52 || card.Equals(Card.None))
+            {
+                this._root = null;
+                return;
+            }
 
-            // Determine side of the leading player
-            int world_side = ((int)world.Leader) & 1;
+            // Reuse subtree if this move was explored
+            if (this._root.TryGet(card, out Node next))
+            {
+                next.Detach();
+                this._root = next;
+            }
 
-            // Is this leader on our partnership?
-            bool our_side = world_side == this._side;
-
-            // Return role based on partnership alignment
-            return our_side ? Role.Partner : Role.Opponent;
+            // Start from a fresh root
+            else this._root = new Node();
         }
 
         /// <summary>
         /// Resets the engine state for a new or continued search.
         /// </summary>
         /// <param name="depth">Search depth per simulation.</param>
-        /// <param name="hard_reset">Whether to clear content.</param>
-        private bool Setup(int depth, bool hard_reset)
+        /// <param name="config">Hyperparameters for a tree search.</param>
+        /// <param name="hard_reset">Whether to clear previous data.</param>
+        private bool Setup(int depth, in Config config, bool hard_reset)
         {
-            this._depth = depth;
+            // Changing depth invalidates the tree shape
+            if (this._depth != depth) this._root = null;
+
             this._elapsed = TimeSpan.Zero;
+            this._config = config;
+            this._depth = depth;
 
             // Reset everything
             if (hard_reset)
@@ -141,21 +210,19 @@ namespace Ace
                 // Can't proceed if game is undefined
                 if (this._game == null) return false;
 
-                // Initialize the sampler for new run
+                // Create fresh root if no reusable tree exists
+                if (this._root == null) this._root = new Node();
+
+                // Reinitialize sampling and counters
                 this._sampler = this._game.Sampling();
-
-                // Clear the current tree
-                this._tree = new Tree();
-
-                // Reset iteration counter
                 this._iterations = 0L;
             }
 
             // Determine a new side from game leader
-            this._side = ((int)this._game.Leader) & 1;
+            this._side = this._game.Leader.ToSide();
 
             // Only return true if the setup is valid
-            return hard_reset || this._tree != null;
+            return hard_reset || this._root != null;
         }
 
         /// <summary>
@@ -179,57 +246,12 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
-        /// Evaluates whether the investigated partnership can achieve their objective:<br></br>
-        /// either making the contract (declarer's side) or setting the contract (defenders).<br></br>
-        /// Also returns the number of tricks available to the leader's partnership in this state.
-        /// </summary>
-        /// <param name="world">Deal state to evaluate, representing a possible game scenario.</param>
-        /// <returns>True if the evaluated partnership can succeed, and their number of tricks.</returns>
-        private (bool win, int tricks) Evaluate(in Deal world)
-        {
-            // Determine leader side in the world state
-            int world_side = ((int)world.Leader) & 1;
-
-            // Determine side of the game contract declarer
-            int dec_side = ((int)this._game.Declarer) & 1;
-
-            // Set tricks to the world's leader
-            int[] tricks = new int[2];
-            tricks[world_side] = world.Tricks();
-
-            // Assign remaining tricks to the opposite side
-            tricks[1 - world_side] = 13 - tricks[world_side];
-
-            // Compute tricks required to make the contract
-            int required = 6 + this._game.Contract.Level;
-
-            // Can declarer's side make the contract?
-            bool can_make = tricks[dec_side] >= required;
-
-            // Can defenders set the game contract?
-            bool can_set = tricks[dec_side] < required;
-
-            // Are we evaluating from declarer's side?
-            bool declarer = this._side == dec_side;
-
-            // Return whether our partnership can succeed
-            bool winnable = declarer ? can_make : can_set;
-            return (winnable, tricks[this._side]);
-        }
-
-        /// <summary>
         /// Executes the internal search process with the specified options.
         /// </summary>
         /// <param name="duration">Total search duration, in milliseconds.</param>
         /// <param name="interval">Interval for periodic progress update.</param>
         private async Task Execute(int duration, int interval)
         {
-            // Ensure sensible minimum values
-            interval = Math.Max(50, interval);
-            duration = Math.Max(250, duration);
-            if (interval > duration) interval = duration;
-
-            // Set up a stopwatch to control the duration 
             var time = TimeSpan.FromMilliseconds(duration);
             Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -242,46 +264,35 @@ namespace Ace
             List<Task> workers = new List<Task>(this._threads);
             for (int thread = 0; thread < this._threads; thread++)
             {
-                // Capture a stable copy
-                int worker = thread;
-
-                // Each worker contributes to the shared search tree
-                workers.Add(Task.Run(() => Run(token, worker), token));
+                workers.Add(Task.Run(() => Run(token, thread), token));
             }
 
             // Start periodic progress reporting
             var progress = Task.Run(async () =>
             {
-                try
+                // Keep the loop active until cancelled
+                while (!token.IsCancellationRequested)
                 {
-                    // Keep the loop active until cancelled
-                    while (!token.IsCancellationRequested)
-                    {
-                        // Wait for the next interval before triggering update
-                        await Task.Delay(interval, token).ConfigureAwait(false);
-
-                        // Notify listeners that progress has been updated
-                        this.Trigger(this.ProgressChanged, stopwatch.Elapsed);
-                    }
+                    // Wait for the next interval before triggering update
+                    await Task.Delay(interval, token).ConfigureAwait(false);
+                    this.Trigger(this.ProgressChanged, stopwatch.Elapsed);
                 }
-                catch (OperationCanceledException) {}
             }, token);
+
+            // Combine all workers
+            workers.Add(progress);
 
             try
             {
-                // Include progress reporter into awaited tasks
-                workers.Add(progress);
-
-                // Wait for all currently running tasks to finish
+                // Await completion of all scheduled worker tasks
                 await Task.WhenAll(workers).ConfigureAwait(false);
             }
             catch (OperationCanceledException) {}
 
-            // Stop the timer
+            // Stop everything
             stopwatch.Stop();
-
-            // Clean up resources related to token
-            this._cts.Dispose(); this._cts = null;
+            this._cts.Dispose();
+            this._cts = null;
 
             // Notify listeners that the search has been completed
             this.Trigger(this.SearchCompleted, stopwatch.Elapsed);
@@ -290,81 +301,62 @@ namespace Ace
         /// <summary>
         /// Starts a single tree search worker using its own random stream.
         /// </summary>
-        /// <param name="token">Token for canceling the operation.</param>
+        /// <param name="token">Token for canceling this operation.</param>
         /// <param name="worker">Worker index used to derive a seed.</param>
         private void Run(in CancellationToken token, int worker)
         {
             // Force each worker to sample different deals deterministically
-            Random.Bind(unchecked(0x5851f42d ^ (worker + 1) * 374761393));
+            Random.Bind(unchecked(this._seed ^ (worker + 1) * 0x165667b1));
 
-            // Process simulation
-            this.Simulate(token);
+            // Run simulations continuously until cancellation is requested
+            while (!token.IsCancellationRequested) this.Simulate(this._root);
         }
 
         /// <summary>
         /// Runs simulations to build out the search tree until stopped.
         /// </summary>
-        /// <param name="token">Token for canceling the operation.</param>
-        private void Simulate(in CancellationToken token)
+        /// <param name="node">Node where the tree search begins.</param>
+        private void Simulate(in Node node)
         {
-            while (!token.IsCancellationRequested)
-            {
-                // Increment and fetch the counter of tested simulations
-                long iters = Interlocked.Increment(ref this._iterations);
+            // Increment and fetch the counter of tested simulations
+            long iters = Interlocked.Increment(ref this._iterations);
 
-                // Cancel tasks if reached the iteration limit
-                if (iters >= this._max_iters) this.Cancel();
+            // Cancel tasks if reached the iteration limit
+            if (iters >= this._max_iters) this.Cancel();
 
-                // Generate new determinization sample
-                Deal deal = this._sampler.Generate();
+            // Generate new determinization sample
+            Deal deal = this._sampler.Generate();
 
-                // Process sample if it meets constraints
-                if (!this._sampler.Filter(deal)) continue;
+            // Process sample if it meets constraints
+            if (!this._sampler.Filter(deal)) return;
 
-                // Synchronize with current game state
-                this._sampler.Synchronize(ref deal);
+            // Synchronize with current game state
+            this._sampler.Synchronize(ref deal);
 
-                // Start a search simulation from the tree root
-                this.Query(this._tree.Root, ref deal, this.Depth);
-            }
+            // Start a new tree search iteration from node
+            this.Query(new MCTS(node, deal, this._depth));
         }
 
         /// <summary>
-        /// Recursively explores the game tree from the current node to a fixed depth.
+        /// Performs a single MCTS iteration on the given sampled world state.
         /// </summary>
-        /// <param name="node">Current info-state node for the search.</param>
-        /// <param name="world">Current deal (world state) to evaluate.</param>
-        /// <param name="depth">Search depth still remaining.</param>
-        private void Query(Node node, ref Deal world, int depth)
+        /// <param name="search">Instance used for this iteration.</param>
+        private void Query(in MCTS search)
         {
-            // Maximum depth has been reached
-            if (depth == 0 || world.IsOver())
-            {
-                // Calculate results using leaf evaluator
-                var (win, tricks) = this.Evaluate(world);
-                node.Insert(win, tricks); return;
-            }
+            // Select most promising node
+            search.Select(this._config);
 
-            // Get all legal moves from this state
-            List<Card> moves = world.GetMoves();
+            // Expand tree with legal actions
+            Deal deal = search.Expand();
 
-            // Pick a random action from possible plays
-            Card action = moves[Random.Next(moves.Count)];
+            // Evaluate the current world state
+            var results = this.Evaluate(deal);
 
-            // Play this move and advance
-            Key key = world.Play(action);
+            // Update action nodes with DDS results
+            var outcome = search.Simulate(results);
 
-            // Assign role for the successor
-            Role role = this.GetRole(world);
-
-            // Lookup or create the successor node by key
-            Node child = this._tree.GetOrCreate(key, role);
-
-            // Update dynamics in this node
-            node.Connect(action, child);
-
-            // Continue the search with reduced depth
-            this.Query(child, ref world, depth - 1);
+            // Back up simulation outcome
+            search.Backpropagate(outcome);
         }
     }
 
@@ -376,7 +368,17 @@ namespace Ace
         /// <param name="game">New game instance.</param>
         public void SetGame(in Game game)
         {
+            if (this._game != null)
+            {
+                // Remove move tracker from previous game
+                this._game.MovePlayed -= this.OnMovePlayed;
+            }
             this._game = game;
+            if (this._game != null)
+            {
+                // Track moves at this game for tree reuse
+                this._game.MovePlayed += this.OnMovePlayed;
+            }
         }
 
         /// <summary>
@@ -389,6 +391,15 @@ namespace Ace
         }
 
         /// <summary>
+        /// Sets the seed for the engine's random number generator.
+        /// </summary>
+        /// <param name="seed">Seed value for randomization.</param>
+        public void SetSeed(int seed)
+        {
+            this._seed = seed;
+        }
+
+        /// <summary>
         /// Requests cancellation of any active search process.
         /// </summary>
         public void Cancel()
@@ -397,52 +408,64 @@ namespace Ace
         }
 
         /// <summary>
-        /// Continues the main search process with the specified options.
-        /// </summary>
-        /// <param name="duration">Total search duration, in milliseconds.</param>
-        /// <param name="interval">Interval for periodic progress update.</param>
-        public async Task Continue(int duration, int interval)
-        {
-            // Prepare the engine to continue this run
-            if (!this.Setup(this._depth, false)) return;
-
-            // Run search for given time, reporting progress periodically
-            await this.Execute(duration, interval).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Executes the main search process with the specified options.
-        /// </summary>
-        /// <param name="duration">Total search duration, in milliseconds.</param>
-        /// <param name="interval">Interval for periodic progress update.</param>
-        /// <param name="depth">Maximum search depth per simulation.</param>
-        public async Task Search(int duration, int interval, int depth)
-        {
-            // Reset everything to start a fresh run for building game tree
-            if (!this.Setup(Math.Max(1, Math.Min(3, depth)), true)) return;
-
-            // Run search for given time, reporting progress periodically
-            await this.Execute(duration, interval).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Returns the evaluation results for each move available from player.
         /// </summary>
-        /// <param name="prior">Smoothing for more stable estimated values.</param>
         /// <returns>A mapping from each card to its evaluation result.</returns>
-        public Evaluation Evaluate(double prior = 0d)
+        public List<Evaluation> Evaluate()
         {
-            // Normalize smoothing factor
-            if (prior < 0d) prior = 0d;
-
-            lock (this._lock)
+            var results = new List<Evaluation>(13);
+            foreach (Node node in this._root.Children.Values)
             {
-                // Unable to evaluate if the tree was not built
-                if (this._tree.IsEmpty) return new Evaluation();
-
-                // Solve the game tree at the current root
-                return new ISS(this._tree, prior).Solve();
+                results.Add(new Evaluation(node, this._config));
             }
+            results.Sort();
+            return results;
+        }
+
+        /// <summary>
+        /// Continues the main search process using the default configuration settings.
+        /// </summary>
+        /// <param name="duration">Total allowed search duration in milliseconds.</param>
+        /// <param name="interval">Interval for progress reporting in milliseconds.</param>
+        public Task Continue(int duration, int interval)
+        {
+            return this.Continue(duration, interval, new Config());
+        }
+
+        /// <summary>
+        /// Continues the main search process using the specified configuration settings.
+        /// </summary>
+        /// <param name="duration">Total allowed search duration in milliseconds.</param>
+        /// <param name="interval">Interval for progress reporting in milliseconds.</param>
+        /// <param name="config">Tree search configuration. Default set if omitted.</param>
+        public async Task Continue(int duration, int interval, Config config)
+        {
+            if (!this.Setup(this._depth, config, false)) return;
+            await this.Execute(duration, interval).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Executes the main search process using the default configuration settings.
+        /// </summary>
+        /// <param name="duration">Total allowed search duration in milliseconds.</param>
+        /// <param name="interval">Interval for progress reporting in milliseconds.</param>
+        /// <param name="depth">Maximum depth to explore a game tree per simulation.</param>
+        public Task Search(int duration, int interval, int depth)
+        {
+            return this.Search(duration, interval, depth, new Config());
+        }
+
+        /// <summary>
+        /// Executes the main search process using the specified configuration settings.
+        /// </summary>
+        /// <param name="duration">Total allowed search duration in milliseconds.</param>
+        /// <param name="interval">Interval for progress reporting in milliseconds.</param>
+        /// <param name="depth">Maximum depth to explore a game tree per simulation.</param>
+        /// <param name="config">Tree search configuration. Default set if omitted.</param>
+        public async Task Search(int duration, int interval, int depth, Config config)
+        {
+            if (!this.Setup(Math.Max(1, depth), config, true)) return;
+            await this.Execute(duration, interval).ConfigureAwait(false);
         }
     }
 }

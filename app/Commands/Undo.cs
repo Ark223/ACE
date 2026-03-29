@@ -30,24 +30,19 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first
                 return Output.Error("No game in progress! " +
                     "Start a new game with 'newgame' command.\n");
             }
-
-            // Try to undo last move
-            if (!session.Game.Undo())
+            else if (!session.Game.Undo())
             {
                 return Output.Error("Nothing to undo.\n");
             }
 
-            // Inform user of the successful undo
-            Output.Success("Last move undone.\n");
-
             // Display the bridge game board
+            Output.Success("Last move undone.\n");
             session.ViewBoard(); return true;
         }
     }

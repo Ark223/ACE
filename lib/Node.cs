@@ -1,239 +1,319 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using static Ace.Extensions;
 
 namespace Ace
 {
     /// <summary>
-    /// Maps each card to its corresponding edge in the tree.
+    /// Maps each card to its corresponding child node in the tree.
     /// </summary>
-    using Edges = ConcurrentDictionary<Card, Edge>;
+    using Children = ConcurrentDictionary<Card, Node>;
 
     /// <summary>
-    /// Associates a unique info-state key with its corresponding node.
-    /// </summary>
-    using States = ConcurrentDictionary<Key, Node>;
-
-    /// <summary>
-    /// Represents the player side or perspective for a corresponding node.
-    /// </summary>
-    internal enum Role
-    {
-        /// <summary>
-        /// Acting player (ourself, or the agent being evaluated).
-        /// </summary>
-        Self = 0,
-
-        /// <summary>
-        /// Our defender or dummy (acting cooperatively with us).
-        /// </summary>
-        Partner = 1,
-
-        /// <summary>
-        /// An opponent (competing against our partnership).
-        /// </summary>
-        Opponent = 2
-    }
-
-    /// <summary>
-    /// Represents an info-state tree for caching and retrieving nodes by key.
-    /// </summary>
-    internal sealed class Tree
-    {
-        private readonly Node _root;
-        private readonly States _states;
-
-        /// <summary>
-        /// Returns true if the tree has no stored nodes.
-        /// </summary>
-        internal bool IsEmpty => this._states.Count == 0;
-
-        /// <summary>
-        /// Gets the root node of the tree.
-        /// </summary>
-        internal Node Root => this._root;
-
-        /// <summary>
-        /// Initializes a new tree with a root node.
-        /// </summary>
-        internal Tree()
-        {
-            this._root = new Node(Role.Self);
-            this._states = new States();
-        }
-
-        /// <summary>
-        /// Gets or creates a node for the specified key and role.
-        /// </summary>
-        /// <param name="key">Unique info-state key.</param>
-        /// <param name="role">Player role (perspective).</param>
-        /// <returns>A node associated with provided key.</returns>
-        internal Node GetOrCreate(Key key, Role role)
-        {
-            Node factory(Key _) => new Node(role);
-            return this._states.GetOrAdd(key, factory);
-        }
-    }
-
-    /// <summary>
-    /// Represents a single action edge from an info-state node.
-    /// </summary>
-    internal sealed class Edge
-    {
-        private long _total;
-        private readonly ConcurrentDictionary<Node, int> _counts;
-
-        /// <summary>
-        /// Creates a new empty edge with no observed successors yet.
-        /// </summary>
-        internal Edge()
-        {
-            this._counts = new ConcurrentDictionary<Node, int>();
-        }
-
-        /// <summary>
-        /// Gets the number of successor nodes observed for this action.
-        /// </summary>
-        internal int Count => this._counts.Count;
-
-        /// <summary>
-        /// Gets the total number of observed successors for this action.
-        /// </summary>
-        internal long Total => Interlocked.Read(ref this._total);
-
-        /// <summary>
-        /// Records one observed transition outcome to a child node.
-        /// </summary>
-        /// <param name="child">Resulting node for this action.</param>
-        internal void Update(in Node child)
-        {
-            // Update transition ending in this child
-            int factory(Node _, int count) => count + 1;
-            this._counts.AddOrUpdate(child, 1, factory);
-
-            // Increment times this action was taken
-            Interlocked.Increment(ref this._total);
-        }
-
-        /// <summary>
-        /// Returns the probability distribution over successor nodes for this action.
-        /// </summary>
-        /// <param name="prior">Additive smoothing applied to observed successors.</param>
-        /// <returns>A sequence representing the probability for each child node.</returns>
-        internal IEnumerable<(Node child, double probability)> Dynamics(double prior = 0d)
-        {
-            // Freeze counts so enumeration is stable
-            var snapshot = this._counts.ToArray();
-
-            // No observed successors yet
-            int length = snapshot.Length;
-            if (length == 0) yield break;
-
-            // Get number of transitions for this action
-            long total = Interlocked.Read(ref this._total);
-            if (total <= 0) yield break;
-
-            // Include normalization for smoothing
-            double denom = total + prior * length;
-            if (denom <= 0) yield break;
-
-            // Yield each successor with its probability
-            foreach (var (child, count) in snapshot)
-            {
-                double prob = (count + prior) / denom;
-                yield return (child, prob);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Represents a node in the tree, storing statistics and outgoing action edges.
+    /// Represents a node in the tree, storing statistics and its children.
     /// </summary>
     internal sealed partial class Node
     {
-        private readonly Role _role;
-        private readonly Edges _edges;
-        private long _evals, _tricks, _wins;
+        private int _wins = 0;
+        private int _depth = 0;
+        private int _level = 0;
+        private int _vloss = 0;
+        private int _visits = 0;
+        private long _avails = 1u;
+        private long _tricks = 0u;
+
+        private Node _parent = null;
+        private readonly Side _side;
+        private readonly Card _action;
+        private readonly Children _children;
 
         /// <summary>
-        /// Gets the player role (perspective) this node represents.
+        /// Gets the partnership perspective (0 = NS, 1 = EW).
         /// </summary>
-        internal Role Role => this._role;
+        internal Side Side => this._side;
 
         /// <summary>
-        /// Gets the outgoing edges for this node, keyed by the played card.
+        /// Gets the action that led to this node from its parent.
         /// </summary>
-        internal IReadOnlyDictionary<Card, Edge> Edges => this._edges;
+        internal Card Action => this._action;
 
         /// <summary>
-        /// Creates a node for the given player role.
+        /// Gets the fixed depth level of this node in the tree.
         /// </summary>
-        /// <param name="role">Player role.</param>
-        internal Node(in Role role = Role.Self)
+        internal int Level => this._level;
+
+        /// <summary>
+        /// Gets a value indicating whether this node is a leaf.
+        /// </summary>
+        internal bool IsLeaf => this._children.IsEmpty;
+
+        /// <summary>
+        /// Gets the child nodes representing all moves played from this node.
+        /// </summary>
+        internal IReadOnlyDictionary<Card, Node> Children => this._children;
+
+        /// <summary>
+        /// Gets the number of times this node was available for selection.
+        /// </summary>
+        internal long Avails => Interlocked.Read(ref this._avails);
+
+        /// <summary>
+        /// Gets the maximum depth level of this node in the tree.
+        /// </summary>
+        internal int Depth => Volatile.Read(ref this._depth);
+
+        /// <summary>
+        /// Gets the number of times this node has been visited.
+        /// </summary>
+        internal int Visits => Volatile.Read(ref this._visits);
+
+        /// <summary>
+        /// Gets the current virtual-loss count applied to this node.
+        /// </summary>
+        internal int VLoss => Volatile.Read(ref this._vloss);
+
+        /// <summary>
+        /// Gets the number of winnings recorded for this node.
+        /// </summary>
+        internal int Winnings => Volatile.Read(ref this._wins);
+
+        /// <summary>
+        /// Gets the total number of tricks accumulated at this node.
+        /// </summary>
+        internal long Tricks => Interlocked.Read(ref this._tricks);
+
+        /// <summary>
+        /// Gets the parent node of this node in the tree.
+        /// </summary>
+        internal Node Parent => Volatile.Read(ref this._parent);
+
+        /// <summary>
+        /// Creates a new root as the starting point of the tree.
+        /// </summary>
+        internal Node()
         {
-            this._role = role;
-            this._edges = new Edges();
+            this._side = default;
+            this._action = default;
+            this._children = new Children();
         }
 
         /// <summary>
-        /// Gets or creates a new edge for the given action.
+        /// Creates a new child node with the given parent and action.
         /// </summary>
+        /// <param name="parent">Parent node in the tree.</param>
         /// <param name="action">Action that was played.</param>
-        /// <returns>Edge object associated with action.</returns>
-        internal Edge AddEdge(in Card action)
+        /// <param name="side">Partnership perspective.</param>
+        internal Node(Node parent, Card action, Side side)
         {
-            return this._edges.GetOrAdd(action, _ => new Edge());
+            this._side = side;
+            this._action = action;
+            this._parent = parent;
+            this._level = parent._level + 1;
+            this._children = new Children();
         }
 
         /// <summary>
-        /// Connects this node to a successor through the given action.
+        /// Increments the availability count for this node.
+        /// </summary>
+        internal void AddAvailability()
+        {
+            Interlocked.Increment(ref this._avails);
+        }
+
+        /// <summary>
+        /// Creates a child node for the action taken at this node.
         /// </summary>
         /// <param name="action">Action that was played.</param>
-        /// <param name="child">Successor info-state node.</param>
-        internal void Connect(in Card action, in Node child)
+        /// <param name="side">Partnership perspective.</param>
+        internal Node AddChild(in Card action, Side side)
         {
-            this.AddEdge(action).Update(child);
+            Node factory(Card card) => new Node(this, card, side);
+            return this._children.GetOrAdd(action, factory);
+        }
+
+        /// <summary>
+        /// Increments the visit count for this node.
+        /// </summary>
+        internal void AddVisit()
+        {
+            Interlocked.Increment(ref this._visits);
+        }
+
+        /// <summary>
+        /// Applies one unit of virtual loss to this node.
+        /// </summary>
+        internal void ApplyLoss()
+        {
+            Interlocked.Add(ref this._vloss, 1);
+        }
+
+        /// <summary>
+        /// Detaches this node and shifts its entire subtree upward.
+        /// </summary>
+        internal void Detach()
+        {
+            this._parent = null;
+            this.ShiftUp();
         }
 
         /// <summary>
         /// Records an evaluation result (win and tricks) at this node.
         /// </summary>
-        /// <param name="win">True if this result is a win.</param>
-        /// <param name="tricks">Number of tricks taken.</param>
-        internal void Insert(bool win, int tricks)
+        /// <param name="winning">True if this result is a win.</param>
+        /// <param name="tricks">Number of tricks obtained.</param>
+        internal void Insert(bool winning, int tricks)
         {
-            Interlocked.Increment(ref _evals);
             Interlocked.Add(ref this._tricks, tricks);
-            if (win) Interlocked.Increment(ref this._wins);
+            if (winning) Interlocked.Increment(ref this._wins);
+        }
+
+        /// <summary>
+        /// Removes one unit of previously applied virtual loss.
+        /// </summary>
+        internal void RevertLoss()
+        {
+            Interlocked.Add(ref this._vloss, -1);
+        }
+
+        /// <summary>
+        /// Updates the maximum depth of this node within the tree.
+        /// </summary>
+        /// <param name="depth">The new depth to assign.</param>
+        internal void SetDepth(int depth)
+        {
+            Maximum(ref this._depth, depth);
+        }
+
+        /// <summary>
+        /// Recursively shifts subtree levels and depths up by one.
+        /// </summary>
+        internal void ShiftUp()
+        {
+            // Move node one level closer to the root
+            this._level = Math.Max(0, this._level - 1);
+            this._depth = Math.Max(0, this._depth - 1);
+
+            // Apply this shift to every child in subtree
+            foreach (Node child in this._children.Values)
+            {
+                child.ShiftUp();
+            }
+        }
+
+        /// <summary>
+        /// Attempts to retrieve the child node for the specified action.
+        /// </summary>
+        /// <param name="action">Action played from this node.</param>
+        /// <param name="node">Child node if found; otherwise, null.</param>
+        /// <returns>True if the child node exists; otherwise, false.</returns>
+        internal bool TryGet(in Card action, out Node node)
+        {
+            return this._children.TryGetValue(action, out node);
         }
     }
 
     internal sealed partial class Node
     {
         /// <summary>
-        /// Gets the average number of tricks from all leaf simulations.
+        /// Computes the Lower Confidence Bound score for this node.
         /// </summary>
-        internal double Tricks
+        /// <param name="exploration">Exploration constant.</param>
+        /// <returns>The LCB score used to rank this node.</returns>
+        internal double LcbScore(double exploration)
         {
-            get
-            {
-                long evals = Interlocked.Read(ref this._evals);
-                long tricks = Interlocked.Read(ref this._tricks);
-                return evals != 0 ? (double)tricks / evals : 0d;
-            }
+            double visits = this.Visits;
+
+            // Unvisited nodes are treated as maximally uncertain
+            if (visits == 0d) return double.NegativeInfinity;
+
+            // Penalty discourages trusting nodes explored less often
+            double penalty = Math.Sqrt(Math.Log(this.Avails) / visits);
+
+            // Final score: exploitation - exploration
+            return this.Winrate() - exploration * penalty;
         }
 
         /// <summary>
-        /// Gets the average win rate from all leaf simulations.
+        /// Computes the Upper Confidence Bound score for this node.
         /// </summary>
-        internal double Winrate
+        /// <param name="exploration">Exploration constant.</param>
+        /// <returns>The UCB score used to rank this node.</returns>
+        internal double UcbScore(double exploration)
         {
-            get
-            {
-                long evals = Interlocked.Read(ref this._evals);
-                long wins = Interlocked.Read(ref this._wins);
-                return evals != 0 ? (double)wins / evals : 0d;
-            }
+            // Virtual loss prevents parallel selection
+            double visits = this.Visits + this.VLoss;
+
+            // Unvisited nodes should be tried at least once
+            if (visits == 0d) return double.PositiveInfinity;
+
+            // Compute probability of success
+            double winrate = this.Winrate();
+
+            // Adjust score for any extra tricks
+            double utility = this.Utility(winrate);
+
+            // Bonus encourages trying actions that are under-sampled
+            double bonus = Math.Sqrt(Math.Log(this.Avails) / visits);
+
+            // Final score: exploitation + exploration term
+            return winrate + utility + exploration * bonus;
+        }
+
+        /// <summary>
+        /// Returns a small bonus based on extra tricks in certain outcomes.
+        /// </summary>
+        /// <param name="winrate">Estimated probability of success.</param>
+        /// <param name="weight">Strength of the score adjustment.</param>
+        /// <returns></returns>
+        internal double Utility(double winrate, double weight = 0.03d)
+        {
+            // Mean score: positive for overtricks, negative for undertricks
+            double bonus = weight * this.Tricks / (this.Visits + this.VLoss);
+
+            // Only apply bonus when the outcome is effectively certain
+            return (winrate < 1e-9 || winrate > 1d - 1e-9) ? bonus : 0d;
+        }
+
+        /// <summary>
+        /// Calculates the value estimate of this node based on results.
+        /// </summary>
+        /// <param name="weight">Factor for adjusting the score.</param>
+        /// <returns>A value representing the score of this node.</returns>
+        internal double Value(double weight = 0.1d)
+        {
+            double visits = this.Visits;
+            if (visits == 0d) return 0d;
+
+            // Compute empirical components of this node
+            double tricks = (double)this.Tricks / visits;
+            double winrate = (double)this.Winnings / visits;
+
+            // Boost score if simulations show consistent success
+            if (winrate > 1d - 1e-9) return 1d + weight * tricks;
+
+            // Penalize score for unsuccessful outcomes
+            if (winrate < 1e-9) return weight * tricks;
+
+            // Standard value
+            return winrate;
+        }
+
+        /// <summary>
+        /// Computes the empirical win rate of this node.
+        /// </summary>
+        /// <returns>The fraction of all games won.</returns>
+        internal double Winrate()
+        {
+            // Virtual loss prevents parallel selection
+            double visits = this.Visits + this.VLoss;
+
+            // No simulation outcomes yet
+            if (visits == 0d) return 0d;
+
+            // Compute Bernoulli win probability
+            return (double)this.Winnings / visits;
         }
     }
 }

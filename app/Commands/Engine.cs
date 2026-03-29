@@ -33,17 +33,13 @@
 
             // Break the input into tokens for easier parsing
             var tokens = input.Trim().Split([' ', '\t', ':']);
-
-            // Check that all expected arguments are present
             if (tokens.Length != 3) return this.PrintHelp();
 
             // Pull out any flags from tokens
             var flags = GetFlags(tokens);
 
-            // Retrieve the threads value from the supported flags
-            string? threads = Extract(flags, ["-t", "--threads"]);
-
             // Parse the thread count from flags, defaulting to 1
+            string? threads = Extract(flags, ["-t", "--threads"]);
             int count = int.TryParse(threads, out var t) ? t : 1;
 
             // Initialize engine with this input

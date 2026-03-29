@@ -79,7 +79,7 @@ namespace Ace
         /// <summary>
         /// Checks whether the move is pseudo-legal in the current game state.
         /// </summary>
-        /// <param name="card">Card to be played.</param>
+        /// <param name="card">Card to be played in this state.</param>
         /// <returns>True if the move is legal; otherwise, false.</returns>
         bool IsLegal(in Card card);
 
@@ -88,6 +88,13 @@ namespace Ace
         /// </summary>
         /// <returns>True if the game is finished; otherwise, false.</returns>
         bool IsOver();
+
+        /// <summary>
+        /// Reveals and sets the dummy's hand after the opening lead.
+        /// </summary>
+        /// <param name="hand">Dummy's revealed hand in PBN format.</param>
+        /// <returns>True if the dummy hand is set; otherwise, false.</returns>
+        bool SetDummy(string hand);
 
         /// <summary>
         /// Undoes the last move, returning the game to its previous state.
@@ -109,7 +116,7 @@ namespace Ace
     }
 
     /// <summary>
-    /// Provides the public state and core functions for managing and playing a bridge game.
+    /// Provides the state and core functions for managing and playing a bridge game.
     /// </summary>
     public sealed partial class Game : IGame, IDisposable
     {
@@ -117,26 +124,24 @@ namespace Ace
         private ulong[] _plays;
         private byte[] _lefts;
         private byte[] _taken;
-        
+
         private ulong _hidden;
         private ushort _voids;
-        private Player _dummy;
         private Player _leader;
         private Trick _trick;
 
+        private Stack<History> _undo;
+        private Stack<History> _redo;
+
+        private readonly Player _dummy;
         private readonly Player _declarer;
         private readonly Contract _contract;
         private readonly ConstraintSet _constraints;
 
         /// <summary>
-        /// Undo stack for move history (supports undo operations).
+        /// Event fired when a move has been successfully played.
         /// </summary>
-        private Stack<History> _undo = new Stack<History>();
-
-        /// <summary>
-        /// Redo stack for move history (supports redo operations).
-        /// </summary>
-        private Stack<History> _redo = new Stack<History>();
+        public event Action<Card> MovePlayed;
 
         /// <summary>
         /// Represents a snapshot of game state for undo/redo.
@@ -444,7 +449,7 @@ namespace Ace
             // Find the index of the winning card for this trick
             var winner = Enumerable.Range(0, 4).OrderBy(index =>
             {
-                ref var card = ref this._trick.Cards[index];
+                ref Card card = ref this._trick.Cards[index];
                 int priority = -this.Priority(card, trump, lead);
                 return (Priority: priority, CardRank: -card.Rank);
             });
@@ -467,7 +472,7 @@ namespace Ace
         /// <returns>Array of suit strings (e.g. "S AKQ").</returns>
         public IEnumerable<string> FormatHand(Player player)
         {
-            // Get the player’s known hand mask
+            // Get the player's known hand mask
             ulong hand = this._hands[(int)player];
 
             // Check if player has still hidden cards
@@ -508,7 +513,7 @@ namespace Ace
     public sealed partial class Game : IGame, IDisposable
     {
         /// <summary>
-        /// Initializes a new bridge game with the specified options.
+        /// Initializes a new bridge game using the specified game options.
         /// </summary>
         /// <param name="options">Game options, including deal and contract.</param>
         public Game(GameOptions options)
@@ -522,6 +527,9 @@ namespace Ace
             this._hands = PBN.ParseDeal(options.Deal);
             this._trick = new Trick(this._leader);
 
+            this._undo = new Stack<History>();
+            this._redo = new Stack<History>();
+
             this._hidden = this.HiddenSet();
             this._lefts = this.FindLefts();
             this._plays = new ulong[4];
@@ -532,7 +540,7 @@ namespace Ace
         /// Factory method for creating a new <see cref="Game"/> instance.
         /// </summary>
         /// <param name="options">Game options, including deal and contract.</param>
-        /// <returns>A new <see cref="Game"/> instance.</returns>
+        /// <returns>A newly initialized <see cref="Game"/> instance.</returns>
         public static Game New(GameOptions options)
         {
             return new Game(options);
@@ -581,7 +589,7 @@ namespace Ace
                 this._lefts[(int)this._leader]--;
             }
 
-            // Remove card from the player’s hand
+            // Remove card from the player's hand
             this._hands[(int)this._leader] &= ~bit;
 
             // Record new play and update the trick
@@ -594,6 +602,8 @@ namespace Ace
             // Otherwise, pass lead to the next player
             else this._leader = this._leader.Next();
 
+            // Notify that a move was played
+            this.MovePlayed?.Invoke(card);
             return true;
         }
 
@@ -608,7 +618,7 @@ namespace Ace
             var moves = new List<Card>();
             Suit lead = this.FirstLead();
 
-            // Get the current leader’s known hand mask
+            // Get the current leader's known hand mask
             ulong hand = this._hands[(int)this._leader];
 
             // Get cards still available to play
@@ -642,8 +652,6 @@ namespace Ace
 
                 // Can't play a suit that's already void
                 if (this.HasVoid(card.Suit)) continue;
-
-                // Checks passed
                 moves.Add(card);
             }
             return moves;
@@ -673,23 +681,18 @@ namespace Ace
         /// <summary>
         /// Checks whether the move is pseudo-legal in the current game state.
         /// </summary>
-        /// <param name="card">Card to be played.</param>
+        /// <param name="card">Card to be played in this state.</param>
         /// <returns>True if the move is legal; otherwise, false.</returns>
         public bool IsLegal(in Card card)
         {
-            // Compute bitmask for played card
             ulong bit = 1ul << card.Index();
-
-            // Determine lead suit for the trick
             Suit lead = this.FirstLead(card);
 
-            // Get the current leader’s known hand mask
+            // Get the current leader's known hand mask
             ulong hand = this._hands[(int)this._leader];
 
-            // Does the leader have any cards of the lead suit?
-            bool has_lead = (hand & this.SuitMask(lead)) != 0;
-
             // Can't discard off-suit if still has the suit led
+            bool has_lead = (hand & this.SuitMask(lead)) != 0;
             if (has_lead && card.Suit != lead) return false;
 
             // Does the leader actually hold this card?
@@ -721,6 +724,30 @@ namespace Ace
         }
 
         /// <summary>
+        /// Reveals and sets the dummy's hand after the opening lead.
+        /// </summary>
+        /// <param name="hand">Dummy's revealed hand in PBN format.</param>
+        /// <returns>True if the dummy hand is set; otherwise, false.</returns>
+        public bool SetDummy(string hand)
+        {
+            // Must be right after opening lead
+            if (this._taken[0] != 0) return false;
+            if (this._taken[1] != 0) return false;
+            if (this._trick.Count != 1) return false;
+
+            // Must contain exactly 13 cards
+            ulong dummy = PBN.ParseHand(hand);
+            int count = Utilities.PopCount(dummy);
+            if (count != 13) return false;
+
+            // Assign cards by updating bitmasks
+            this._hands[(int)this._dummy] = dummy;
+            this._lefts[(int)this._dummy] = 0;
+            this._hidden &= ~dummy;
+            return true;
+        }
+
+        /// <summary>
         /// Undoes the last move, returning the game to its previous state.
         /// </summary>
         /// <returns>True if an action was performed; otherwise, false.</returns>
@@ -729,10 +756,10 @@ namespace Ace
             // Cannot undo; no previous moves
             if (!this._undo.Any()) return false;
 
-            // Save the current state to redo
-            this._redo.Push(new History(this));
+            // Signal a state change for engine
+            this.MovePlayed?.Invoke(Card.None);
 
-            // Restore previous state from undo
+            this._redo.Push(new History(this));
             return this._undo.Pop().ApplyTo(this);
         }
 
@@ -745,10 +772,10 @@ namespace Ace
             // Cannot redo; no further moves
             if (!this._redo.Any()) return false;
 
-            // Save the current state to undo
-            this._undo.Push(new History(this));
+            // Signal a state change for engine
+            this.MovePlayed?.Invoke(Card.None);
 
-            // Restore previous state from redo
+            this._undo.Push(new History(this));
             return this._redo.Pop().ApplyTo(this);
         }
 
@@ -800,10 +827,10 @@ namespace Ace
             var west = hands[3].Select(x => x.PadRight(width)).ToArray();
 
             // Prepare prefixes for each pair's trick counts
-            string ns_prefix = $" NS: {this._taken[0], -3} ";
-            string ew_prefix = $" EW: {this._taken[1], -3} ";
+            string ns_prefix = $" NS: {this._taken[0],-3} ";
+            string ew_prefix = $" EW: {this._taken[1],-3} ";
 
-            // Insert trick counts into North’s hand block
+            // Insert trick counts into North's hand block
             string[] block = new string[4]
             {
                 north[0], ns_prefix + north[1].Substring(9),
@@ -857,7 +884,7 @@ namespace Ace
         {
             return new Sampler(this);
         }
-        
+
         /// <summary>
         /// Finalizer for <see cref="Game"/> instance.
         /// </summary>

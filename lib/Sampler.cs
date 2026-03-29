@@ -29,10 +29,7 @@ namespace Ace
             this.UnplayTrick();
             this.Precompute();
         }
-    }
 
-    internal sealed partial class Sampler
-    {
         /// <summary>
         /// Converts an array of card indices into a list of <see cref="Card"/> objects.
         /// </summary>

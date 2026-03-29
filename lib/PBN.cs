@@ -36,7 +36,7 @@ namespace Ace
         /// </summary>
         /// <param name="hand">A string describing a single hand in PBN format.</param>
         /// <returns>A 52-bit mask where each bit represents a card in the hand.</returns>
-        private static ulong ParseHand(string hand)
+        internal static ulong ParseHand(string hand)
         {
             ulong mask = 0ul;
             if (string.IsNullOrEmpty(hand) || hand == "...")

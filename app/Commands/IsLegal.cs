@@ -33,7 +33,6 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first
@@ -43,14 +42,9 @@
 
             // Break the input into tokens for easier parsing
             var tokens = input.Trim().Split([' ', '\t', ':']);
-
-            // Check that all expected arguments are present
             if (tokens.Length != 2) return this.PrintHelp();
 
-            // Normalize card input to uppercase
             string card = tokens[1].ToUpper();
-
-            // Check if the given card is legal
             if (!session.Game.IsLegal(card))
             {
                 // Notify the user that this card is not a legal move
@@ -58,8 +52,7 @@
             }
 
             // Confirm to user that the card is a legal play
-            Output.Success($"{card} is a legal play.\n");
-            return true;
+            return Output.Success($"{card} is a legal play.\n");
         }
     }
 }

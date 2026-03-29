@@ -53,7 +53,7 @@ namespace Ace
         }
 
         /// <summary>
-        /// Creates a deep copy of the trick.
+        /// Creates a deep copy of the current trick.
         /// </summary>
         /// <returns>A new <see cref="Trick"/> instance.</returns>
         internal Trick Copy()

@@ -42,16 +42,12 @@ namespace Ace.App.Commands
             // Return false if input is blank or whitespace
             if (string.IsNullOrWhiteSpace(range)) return false;
 
-            // Split input string by comma
+            // Split fragmented input by comma
             var parts = range.Trim().Split(',');
-
-            // Make sure two values are provided
             if (parts.Length != 2) return false;
 
-            // Try to parse the minimum value from the first part
+            // Try to parse the min/max value from splitted parts
             if (!int.TryParse(parts[0], out int min)) return false;
-
-            // Try to parse the maximum value from the second part
             if (!int.TryParse(parts[1], out int max)) return false;
 
             // Assign parsed values to the range object
@@ -73,7 +69,6 @@ namespace Ace.App.Commands
             // Display help section if user has requested it
             if (input.Contains("-help")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first
@@ -83,8 +78,6 @@ namespace Ace.App.Commands
 
             // Break the input into tokens for easier parsing
             var tokens = input.Trim().Split([' ', '\t', ':']);
-
-            // Check that all expected arguments are present
             if (tokens.Length < 4) return this.PrintHelp();
 
             // Accept only N, E, S, or W as the valid player value
@@ -93,10 +86,8 @@ namespace Ace.App.Commands
                 return Output.Error("Player must be one of: N/E/S/W.\n");
             }
 
-            // Get the player value for the selected side
-            Player player = Enum.GetValues<Player>()[side];
-
             // Access the constraint for the selected player
+            Player player = Enum.GetValues<Player>()[side];
             var consts = session.Game.Constraints[player];
 
             // Pull out any flags from tokens
@@ -122,7 +113,6 @@ namespace Ace.App.Commands
             string? hcp = Extract(flags, ["-p", "--hcp"]);
             if (Parse(hcp, out var p, true)) consts.Hcp = p;
 
-            // Inform user that constraints were set successfully
             Output.Success("All player constraints updated.\n");
 
             // Loop through players and display each constraint
@@ -133,8 +123,8 @@ namespace Ace.App.Commands
                     + $" D {co.Diamonds} C {co.Clubs} HCP {co.Hcp}");
             }
 
-            // Print extra line for clarity
-            Output.Info(""); return true;
+            // Print line for clarity
+            return Output.Info("");
         }
     }
 }

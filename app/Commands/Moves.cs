@@ -32,7 +32,6 @@ namespace Ace.App.Commands
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if game is defined
             if (session.Game == null)
             {
                 // Must inform the user to start a game first
@@ -54,8 +53,7 @@ namespace Ace.App.Commands
                 Output.Info($"{suit.ToString()[0]} {string.Concat(cards)}");
             }
 
-            // Print blank line for spacing
-            Output.Info(""); return true;
+            return Output.Info("");
         }
     }
 }

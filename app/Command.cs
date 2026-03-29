@@ -25,10 +25,8 @@
             // Strip leading whitespace for parsing
             string command = input.TrimStart();
 
-            // Find separator index (space, tab, or colon)
-            int sep = command.IndexOfAny([' ', '\t', ':']);
-
             // Take everything up to separator as the verb
+            int sep = command.IndexOfAny([' ', '\t', ':']);
             string verb = sep < 0 ? command : command[..sep];
 
             // Return true if main name matches
@@ -60,7 +58,6 @@
         /// <returns>Dictionary mapping flag names to their associated values.</returns>
         protected static IReadOnlyDictionary<string, string> GetFlags(string[] tokens)
         {
-            // Stores the results as pairs: flag -> value
             var dictionary = new Dictionary<string, string>();
 
             // Utility to check if the token is a flag (starts with '-')
@@ -90,10 +87,8 @@
             // Trim off the shared indent for a cleaner look in the console
             var text = lines.Select(t => t.Length > indent ? t[indent..] : t);
 
-            // Keep the first line as-is and process the rest
-            text = new[] { lines[0] }.Concat(text.Skip(1));
-
             // Output each unindented line to the console
+            text = new[] { lines[0] }.Concat(text.Skip(1));
             foreach (var line in text) Output.Info(line);
 
             // Enter next line and return success

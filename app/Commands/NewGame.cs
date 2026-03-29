@@ -39,26 +39,20 @@ namespace Ace.App.Commands
 
             // Break the input into tokens for easier parsing
             var tokens = input.Trim().Split([' ', '\t', ':']);
-
-            // Check that all expected arguments are present
             if (tokens.Length != 9) return this.PrintHelp();
 
             // Pull out any flags from tokens
             var flags = GetFlags(tokens);
 
-            // Retrieve the declarer value from the supported flags
-            string? declarer = Extract(flags, ["-d", "--declarer"]);
-
             // Accept only N, E, S, or W as valid declarer values
+            string? declarer = Extract(flags, ["-d", "--declarer"]);
             if (!"nesw".Contains((declarer ?? "N").ToLower()))
             {
                 return Output.Error("Declarer must be one of: N/E/S/W.\n");
             }
 
-            // Retrieve the contract value from the supported flags
-            string? contract = Extract(flags, ["-c", "--contract"]);
-
             // Try parsing the contract string; otherwise throw error
+            string? contract = Extract(flags, ["-c", "--contract"]);
             if (!Contract.TryParse(contract, out Contract result))
             {
                 return Output.Error("Invalid contract (e.g., 3NT, 4H).\n");
@@ -69,8 +63,6 @@ namespace Ace.App.Commands
 
             // Reconstruct the full deal from input and start a new game
             session.NewGame(string.Join(" ", tokens[1..5]), player, result);
-
-            // Let the user know everything's set up and ready to go
             Output.Success("New game created. Ready for play.\n");
 
             // Attach this new game to the engine

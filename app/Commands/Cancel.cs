@@ -27,18 +27,14 @@
             // Display help section if user has requested it
             if (input.Contains("-h")) return this.PrintHelp();
 
-            // Check if engine exists and the search is in progress
             if (session.Engine == null || !session.Engine.IsSearching)
             {
+                // Must inform the user to run a tree search process first
                 return Output.Error("No search is currently running.\n");
             }
 
-            // Cancel ongoing analysis
             session.Cancel();
-
-            // Inform user that the search was cancelled
-            Output.Success("Ongoing search cancelled.\n");
-            return true;
+            return Output.Success("Ongoing search cancelled.\n");
         }
     }
 }

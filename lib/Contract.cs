@@ -40,8 +40,10 @@ namespace Ace
             {
                 return Contract.None;
             }
+
             Suit strain = Suit.NoTrump;
             int level = contract[0] - '0';
+
             switch (char.ToUpper(contract[1]))
             {
                 case 'C': strain = Suit.Clubs;    break;
@@ -50,6 +52,7 @@ namespace Ace
                 case 'S': strain = Suit.Spades;   break;
                 case 'N': strain = Suit.NoTrump;  break;
             }
+
             return new Contract(level, strain);
         }
 
@@ -62,6 +65,7 @@ namespace Ace
         public static bool TryParse(string contract, out Contract result)
         {
             result = Contract.None;
+
             if (string.IsNullOrEmpty(contract))
             {
                 return false;
@@ -70,8 +74,10 @@ namespace Ace
             {
                 return false;
             }
+
             Suit strain = Suit.NoTrump;
             int level = contract[0] - '0';
+
             switch (char.ToUpper(contract[1]))
             {
                 case 'C': strain = Suit.Clubs;    break;
@@ -81,6 +87,7 @@ namespace Ace
                 case 'N': strain = Suit.NoTrump;  break;
                 default: return false;
             }
+
             result = new Contract(level, strain);
             return true;
         }

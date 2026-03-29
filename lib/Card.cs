@@ -8,52 +8,22 @@ namespace Ace
     /// <summary>
     /// Represents a single playing card in a bridge game.
     /// </summary>
-    public readonly struct Card : IEquatable<Card>, IComparable<Card>
+    public readonly partial struct Card : IEquatable<Card>, IComparable<Card>
     {
+        /// <summary>
+        /// Gets the rank of this card (from 2 through 14).
+        /// </summary>
         public int Rank { get; }
+
+        /// <summary>
+        /// Gets the suit of this card (Club, Diamond, Heart, or Spade).
+        /// </summary>
         public Suit Suit { get; }
 
         /// <summary>
-        /// Maps rank characters ('2', ..., 'A') to integer values (2–14).
+        /// Gets the sentinel card value used to represent no card.
         /// </summary>
-        internal static readonly Dictionary<char, int> RankFromChar = new Dictionary<char, int>
-        {
-            ['2'] = 2,  ['3'] = 3,  ['4'] = 4,  ['5'] = 5,
-            ['6'] = 6,  ['7'] = 7,  ['8'] = 8,  ['9'] = 9,
-            ['T'] = 10, ['J'] = 11, ['Q'] = 12, ['K'] = 13, ['A'] = 14
-        };
-
-        /// <summary>
-        /// Maps rank values (2–14) to rank characters ('2', ..., 'A').
-        /// </summary>
-        internal static readonly Dictionary<int, char> RankToChar = new Dictionary<int, char>
-        {
-            [2]  = '2', [3]  = '3', [4]  = '4', [5]  = '5',
-            [6]  = '6', [7]  = '7', [8]  = '8', [9]  = '9',
-            [10] = 'T', [11] = 'J', [12] = 'Q', [13] = 'K', [14] = 'A'
-        };
-
-        /// <summary>
-        /// Maps suit characters ('C', 'D', 'H', 'S') to <see cref="Suit"/> values.
-        /// </summary>
-        internal static readonly Dictionary<char, Suit> SuitFromChar = new Dictionary<char, Suit>
-        {
-            ['C'] = Suit.Clubs,
-            ['D'] = Suit.Diamonds,
-            ['H'] = Suit.Hearts,
-            ['S'] = Suit.Spades
-        };
-
-        /// <summary>
-        /// Maps <see cref="Suit"/> values to suit characters ('C', 'D', 'H', 'S').
-        /// </summary>
-        internal static readonly Dictionary<Suit, char> SuitToChar = new Dictionary<Suit, char>
-        {
-            [Suit.Clubs]    = 'C',
-            [Suit.Diamonds] = 'D',
-            [Suit.Hearts]   = 'H',
-            [Suit.Spades]   = 'S'
-        };
+        public static Card None => default;
 
         /// <summary>
         /// Creates a new card with the input rank and suit.
@@ -74,13 +44,13 @@ namespace Ace
         /// A <see cref="Card"/> corresponding to the specified index.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static Card Create(int index)
+        public static Card Create(int index)
         {
             return new Card((index % 13) + 2, (Suit)(index / 13));
         }
 
         /// <summary>
-        /// Gets the high card point (HCP) value for this card (A=4, K=3, Q=2, J=1, others=0).
+        /// Gets the high card point (HCP) value for this card (A=4, K=3, Q=2, J=1).
         /// </summary>
         /// <returns>High card point value of this card.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -90,7 +60,7 @@ namespace Ace
         }
 
         /// <summary>
-        /// Gets the unique zero-based index (0..51) for this card, based on suit and rank.
+        /// Gets the unique index (0..51) for this card, based on suit and rank.
         /// <br></br>Spades: 0–12, Hearts: 13–25, Diamonds: 26–38, Clubs: 39–51.
         /// </summary>
         /// <returns>Zero-based index corresponding to this card.</returns>
@@ -114,7 +84,6 @@ namespace Ace
             if (string.IsNullOrEmpty(str) || str.Length != 2)
                 return false;
 
-            // Pull out the suit and rank as uppercase
             char ca = char.ToUpperInvariant(str[0]);
             char cb = char.ToUpperInvariant(str[1]);
 
@@ -173,12 +142,57 @@ namespace Ace
         }
 
         /// <summary>
-        /// Returns a hash code for this card based on its unique deck index.
+        /// Returns a hash code for this card based on its deck index.
         /// </summary>
         /// <returns>A unique hash code for this card.</returns>
         public override int GetHashCode()
         {
             return this.Index();
         }
+    }
+
+    public readonly partial struct Card : IEquatable<Card>, IComparable<Card>
+    {
+        /// <summary>
+        /// Maps rank characters ('2', ..., 'A') to integer values (2–14).
+        /// </summary>
+        internal static readonly Dictionary<char, int> RankFromChar = new Dictionary<char, int>
+        {
+            ['2'] = 2,  ['3'] = 3,  ['4'] = 4,  ['5'] = 5,
+            ['6'] = 6,  ['7'] = 7,  ['8'] = 8,  ['9'] = 9,
+            ['T'] = 10, ['J'] = 11, ['Q'] = 12, ['K'] = 13, ['A'] = 14
+        };
+
+        /// <summary>
+        /// Maps rank values (2–14) to rank characters ('2', ..., 'A').
+        /// </summary>
+        internal static readonly Dictionary<int, char> RankToChar = new Dictionary<int, char>
+        {
+            [2]  = '2', [3]  = '3', [4]  = '4', [5]  = '5',
+            [6]  = '6', [7]  = '7', [8]  = '8', [9]  = '9',
+            [10] = 'T', [11] = 'J', [12] = 'Q', [13] = 'K', [14] = 'A'
+        };
+
+        /// <summary>
+        /// Maps suit characters ('C', 'D', 'H', 'S') to <see cref="Suit"/> values.
+        /// </summary>
+        internal static readonly Dictionary<char, Suit> SuitFromChar = new Dictionary<char, Suit>
+        {
+            ['C'] = Suit.Clubs,
+            ['D'] = Suit.Diamonds,
+            ['H'] = Suit.Hearts,
+            ['S'] = Suit.Spades
+        };
+
+        /// <summary>
+        /// Maps <see cref="Suit"/> values to suit characters ('C', 'D', 'H', 'S').
+        /// </summary>
+        internal static readonly Dictionary<Suit, char> SuitToChar = new Dictionary<Suit, char>
+        {
+            [Suit.Clubs]    = 'C',
+            [Suit.Diamonds] = 'D',
+            [Suit.Hearts]   = 'H',
+            [Suit.Spades]   = 'S'
+        };
     }
 }
