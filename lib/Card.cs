@@ -154,7 +154,7 @@ namespace Ace
     public readonly partial struct Card : IEquatable<Card>
     {
         /// <summary>
-        /// Maps rank characters ('2', ..., 'A') to integer values (2–14).
+        /// Maps rank characters ('2', ..., 'A') to integer values (from 2 through 14).
         /// </summary>
         internal static readonly Dictionary<char, int> RankFromChar = new Dictionary<char, int>
         {
@@ -164,7 +164,7 @@ namespace Ace
         };
 
         /// <summary>
-        /// Maps rank values (2–14) to rank characters ('2', ..., 'A').
+        /// Maps rank values (from 2 through 14) to rank characters ('2', ..., 'A').
         /// </summary>
         internal static readonly Dictionary<int, char> RankToChar = new Dictionary<int, char>
         {

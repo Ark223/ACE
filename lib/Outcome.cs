@@ -51,11 +51,7 @@ namespace Ace
         internal void Maximize(in Outcome other)
         {
             this.Side = other.Side;
-
-            // Always choose a winning result
             if (other.IsWin) this.IsWin = true;
-
-            // Prefer outcome that guarantees a higher number of tricks
             if (other.Tricks > this.Tricks) this.Tricks = other.Tricks;
         }
 

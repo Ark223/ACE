@@ -5,7 +5,7 @@ using static Ace.Extensions;
 namespace Ace
 {
     /// <summary>
-    /// Supports generating and filtering random deals consistent with the current game state.
+    /// Supports generating and filtering deals consistent with the current game state.
     /// </summary>
     internal sealed partial class Sampler
     {

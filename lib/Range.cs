@@ -9,7 +9,7 @@
         internal int Max { get; }
 
         /// <summary>
-        /// Initializes a new <see cref="Range"/> with specified minimum and maximum values.
+        /// Initializes a new <see cref="Range"/> with specified values.
         /// </summary>
         /// <param name="min">Minimum value.</param>
         /// <param name="max">Maximum value.</param>

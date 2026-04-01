@@ -16,7 +16,7 @@ namespace Ace
         };
 
         /// <summary>
-        /// Parses a PBN deal into an array of bitmasks.
+        /// Parses a PBN deal into an array of bitmasks, one for each player hand.
         /// </summary>
         /// <param name="pbn">A string with hands in PBN format, separated by spaces.</param>
         /// <returns>An array of values, each representing a hand as a 52-bit mask.</returns>

@@ -207,9 +207,9 @@ namespace Ace
                 this._deal.Play(this._node.Action);
                 this._depth--;
 
-                // Limit selection to the current trick
-                bool played = this._deal.Trick.Any();
-                if (config.Limiter && !played) break;
+                // Stop at trick boundary if depth is too low
+                bool limit = config.Limiter && this._depth < 4;
+                if (limit && !this._deal.Trick.Any()) break;
             }
         }
 

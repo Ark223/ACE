@@ -22,11 +22,12 @@ namespace Ace
         public double Exploration { get; set; } = 0.6061d;
 
         /// <summary>
-        /// Controls whether the search is restricted to the current trick.
+        /// Controls whether the search is restricted by trick boundaries.
         /// </summary>
         /// <remarks>
-        /// When enabled, the search tree grows within the ongoing trick,<br>
-        /// </br>while when disabled it may also expand across multiple tricks.
+        /// When enabled, the search tree grows within the ongoing trick<br>
+        /// </br>and may continue into the next trick if depth extends that far,<br>
+        /// </br>while when disabled the tree expands until depth is exhausted.
         /// </remarks>
         public bool Limiter { get; set; } = false;
     }
@@ -121,9 +122,10 @@ namespace Ace
 
             // Determine side of the game contract declarer
             int dec_side = ((int)this._game.Declarer) & 1;
-
-            // Are we evaluating from declarer's side?
             bool declarer = (int)this._side == dec_side;
+
+            // Number of tricks needed to make a contract
+            int required = 6 + this._game.Contract.Level;
 
             // Store evaluation outcome for each candidate
             var evals = new Dictionary<Card, Outcome>();
@@ -141,14 +143,14 @@ namespace Ace
                 tricks[1 - world_side] = 13 - tricks[world_side];
 
                 // Assess whether the contract is made or set
-                int required = 6 + this._game.Contract.Level;
+                int overtricks = tricks[dec_side] - required;
                 bool can_make = tricks[dec_side] >= required;
                 bool can_set = tricks[dec_side] < required;
 
-                // Evaluate if our partnership can achieve goal
-                int score = tricks[(int)this._side] - required;
+                // Evaluate success from our side perspective
+                int margin = (declarer ? 1 : -1) * overtricks;
                 evals[move] = new Outcome(declarer ? can_make :
-                    can_set, Math.Min(13, score), this._side);
+                    can_set, Math.Min(13, margin), this._side);
             }
             return evals;
         }

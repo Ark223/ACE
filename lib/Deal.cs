@@ -196,7 +196,6 @@ namespace Ace
         /// <returns>Always true when the replay is done.</returns>
         internal bool Replay()
         {
-            // Replay cards without adding to current trick
             for (int idx = 0; idx < this._trick.Count; ++idx)
             {
                 this.Play(this._trick.Cards[idx], true);
@@ -260,7 +259,7 @@ namespace Ace
             var hands = new string[4];
             for (int seat = 0; seat < 4; seat++)
             {
-                // Build lookup table for card checking
+                // Build lookup table for all cards
                 bool[,] has_card = new bool[4, 15];
 
                 // Mark each card present in this hand
