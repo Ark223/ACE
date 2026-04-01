@@ -1,0 +1,144 @@
+## Usage
+
+### Creating a new game
+
+Here’s a basic example of how to initialize a new game of Bridge with optional hand constraints.
+
+```csharp
+var constraints = new ConstraintSet();
+constraints[Player.East].Hcp    = new Range(8, 37);
+constraints[Player.East].Spades = new Range(5, 13);
+
+var deal = "AJ82.6.A74.QJ643 ... 3.AQT52.K963.K98 ...";
+var options = new GameOptions
+{
+    Deal        = deal,
+    Declarer    = Player.North,
+    Contract    = Contract.Parse("3NT"),
+    Constraints = constraints
+};
+
+var game = Game.New(options);
+```
+
+We define a new <code>ConstraintSet</code>, which allows you to specify HCP range and suit length for each player.  
+In this example, we require that East player holds between 8 and 37 HCP, and has at least 5 spades in hand.  
+You can also use the <code>ConstraintSet.Empty</code> property to skip these constraints when none are needed.
+
+The <code>deal</code> string uses PBN format, where hands are listed in the order North–East–South–West (NESW).  
+In this example, only North and South are fully known, while East and West are left as unknown using <code>...</code>.  
+You can find the full PBN specification here: https://www.tistis.nl/pbn/pbn_v21.txt.
+
+We create a <code>GameOptions</code> object to define the deal, specify declarer and contract, and apply any constraints.  
+Once the options are set up, we can create a new game instance using the <code>Game.New</code> function. That's it!
+
+---
+
+### Legality checking
+
+ACE allows querying pseudo-legal moves during gameplay - "pseudo" because some cards may still be hidden.
+
+To see which cards the current player can potentially play, call the <code>GetMoves</code> method (returned as card objects):
+
+```csharp
+var moves = string.Join(", ", game.GetMoves());
+Console.WriteLine("Available moves: " + moves);
+```
+
+You can also check if a particular card is "legal" to play in the current state by using <code>IsLegal</code> method:
+
+```csharp
+if (!game.IsLegal("SA"))
+    Console.WriteLine("Ace of Spades is not legal play!");
+```
+
+Card strings follow the format: suit first, then rank - in this example, <code>"SA"</code> represents the Ace of Spades.  
+Valid suits are: <code>S</code> (Spades), <code>H</code> (Hearts), <code>D</code> (Diamonds), <code>C</code> (Clubs);
+ranks are: <code>A K Q J T 9 8 7 6 5 4 3 2</code>.
+
+---
+
+### Gameplay
+
+Once a game is initialized, you can simulate the play sequence using card strings:
+
+```csharp
+game.Play("SQ"); // East plays Queen of Spades
+game.Play("S3"); // South responds with 3 of Spades
+```
+
+It is also possible to undo and redo moves:
+
+```csharp
+game.Undo(); // Undo the last move (3S)
+game.Redo(); // Redo the previously undone move (3S)
+```
+
+By default, each move is <b>legality-checked</b> (only playable cards are allowed in this state).  
+To skip this check (e.g. when replaying known sequences), pass false as the second argument:
+
+```csharp
+game.Play("S7", false); // Bypass legality check for S7
+game.Play("SA", false); // Bypass check as well for SA
+```
+
+To check how many tricks a partnership has won so far, call <code>GetTricks</code> with any player from that pair:
+
+```csharp
+var tricks = game.GetTricks(Player.North);
+Console.WriteLine("Tricks won by NS: " + tricks);
+```
+
+You can clone the game state to explore different plays independently, without affecting the original game.
+
+```csharp
+var copy = game.Clone();
+copy.Play("C4", false);
+```
+
+---
+
+### Analyzing games
+
+ACE provides a simple interface for evaluating cardplay decisions from the perspective of the current player.
+
+To analyze the game, start by creating a new solver instance using <code>Engine.New</code> and attaching your game to it:
+
+```csharp
+var engine = Engine.New(threads: 10);
+engine.SetGame(game);
+```
+
+Make sure to set the number of threads (typically a number of available CPU logical cores) via <code>threads: N</code>.  
+Assigning more threads allows ACE to perform more simulations, improving search speed and accuracy.
+
+You can subscribe to the <code>ProgressChanged</code> event to react to intermediate results during the search:
+
+```csharp
+engine.ProgressChanged += () =>
+{
+    var results = engine.Evaluate();
+    Console.WriteLine(engine.Iterations);
+    Console.WriteLine("\n" + results);
+};
+```
+
+The <code>Evaluate</code> method returns a list of <code>Evaluation</code> records containing the action, value, visits, and search depth.  
+Each value returned by <code>Evaluate</code> typically falls between <code>0</code> and <code>1</code>,
+representing the estimated chance of winning.
+
+However, scores can go outside this range:
+- Values <b>below 0</b> suggest that the side is guaranteed to fail its objective.
+- Values <b>above 1</b> indicate an almost certain success for the side.
+
+These extended scores help differentiate between borderline and extreme outcomes.  
+The choice of evaluation models is discussed further in the next section of this documentation.
+
+To begin the simulations, call <code>Search</code> function, which runs asynchronously for a given duration:
+
+```csharp
+engine.Search(duration: 10000, interval: 100, depth: 52);
+```
+
+It performs a tree search starting from the current state, exploring possible outcomes based on your parameters.  
+You can either wait for completion or subscribe to the <code>SearchCompleted</code> event to be notified when it finishes.
