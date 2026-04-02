@@ -123,17 +123,16 @@ engine.ProgressChanged += () =>
 };
 ```
 
-The <code>Evaluate</code> method returns a list of <code>Evaluation</code> records containing the action, value, visits, and search depth.  
-Each value returned by <code>Evaluate</code> typically falls between <code>0</code> and <code>1</code>,
-representing the estimated chance of winning.
+The <code>Evaluate</code> method returns a list of <code>Evaluation</code> records containing action, value, visits, and search depth.  
+Each value returned by <code>Evaluate</code> typically falls between 0 and 1, indicating the estimated chance of winning.
 
 However, scores can go outside this range:
 - Values <b>below 0</b> suggest that the side is guaranteed to fail its objective.
 - Values <b>above 1</b> indicate an almost certain success for the side.
 
-These extended scores encode the number of overtricks or undertricks relative to the contract.  
-For example, a value of 1.2 means the contract is made with 2 overtricks, while 1.0 means just made.  
-Similarly, negative values indicate undertricks, so -0.2 means the player objective fails by 2 tricks.
+These extended scores encode the number of overtricks relative to the contract from the player's perspective.  
+For example, a value of 1.2 means the player can finish with 2 overtricks, while 1.0 means meeting the target.  
+Similarly, negative values indicate finishing below the expected target, so -0.2 means falling short by 2 tricks.
 
 To begin the simulations, call <code>Search</code> function, which runs asynchronously for a given duration:
 
