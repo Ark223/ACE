@@ -21,7 +21,8 @@
                  newgame    - Start a new game with the given deal and options
                  islegal    - Check if a play is legal in the current position
                  moves      - List all legal moves for the current player
-                 set        - Set hand constraints for a selected player
+                 filter     - Set hand constraints for a selected player
+                 dummy      - Set dummy hand after the opening lead
                  play       - Play a card for the current player
                  view       - Show the current state of the game
                  undo       - Undo the last move
@@ -29,13 +30,14 @@
 
                  engine     - Set up an engine with thread count
                  search     - Run tree search for the current game
-                 cancel     - Stop the ongoing search
+                 cancel     - Stop the ongoing tree search
                  continue   - Resume tree search from the previous state
                  evaluate   - Evaluate each move and display its score
 
              Type ""<command> --help"" for details on a specific command.
              Type ""exit"" or ""quit"" to close the application."
-        ){ }
+        )
+        { }
 
         /// <summary>
         /// Runs the command with given input and session context.

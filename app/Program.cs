@@ -14,7 +14,8 @@ namespace Ace.App
             new NewGame(),   // Start a new bridge game
             new IsLegal(),   // Check legality of a play
             new Moves(),     // List all available moves
-            new Set(),       // Update hand constraints
+            new Filter(),    // Update hand constraints
+            new Dummy(),     // Assign dummy hand
             new Play(),      // Play a card
             new Undo(),      // Undo last move
             new Redo(),      // Redo undone move

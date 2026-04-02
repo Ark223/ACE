@@ -5,13 +5,13 @@ namespace Ace.App.Commands
     /// <summary>
     /// Responds for setting hand constraints for a selected player.
     /// </summary>
-    internal sealed class Set : Command
+    internal sealed class Filter : Command
     {
-        internal Set() : base
+        internal Filter() : base
         (
-            "set", ["constraints", "const"],
+            "filter", ["constrain", "constraints", "range"],
 
-           @"Usage: set|constraints|const <player> --<constraint> <min>,<max> ...
+           @"Usage: filter|constrain|constraints|range <player> --<constraint> <min>,<max> ...
 
              Sets a minimum and maximum value for each specified hand constraint.
 
@@ -24,7 +24,7 @@ namespace Ace.App.Commands
                  --help           Show this message and exit
 
              Example:
-                 set S --spades 5,13 --hcp 8,37"
+                 filter S --spades 5,13 --hcp 8,37"
         ){ }
 
         /// <summary>
@@ -116,10 +116,10 @@ namespace Ace.App.Commands
             Output.Success("All player constraints updated.\n");
 
             // Loop through players and display each constraint
-            foreach (Player play in Enum.GetValues<Player>())
+            foreach (Player seat in Enum.GetValues<Player>())
             {
-                var co = session.Game.Constraints[play];
-                Output.Info($"{play, -5}: S {co.Spades} H {co.Hearts}"
+                var co = session.Game.Constraints[seat];
+                Output.Info($"{seat, -5}: S {co.Spades} H {co.Hearts}"
                     + $" D {co.Diamonds} C {co.Clubs} HCP {co.Hcp}");
             }
 
