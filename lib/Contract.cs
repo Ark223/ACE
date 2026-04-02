@@ -77,15 +77,11 @@ namespace Ace
 
             // Empty input means no contract
             if (string.IsNullOrEmpty(contract))
-            {
                 return false;
-            }
 
             // Contract level must be between 1 and 7
             if (contract[0] < '1' || contract[0] > '7')
-            {
                 return false;
-            }
 
             Suit strain = Suit.NoTrump;
             int level = contract[0] - '0';

@@ -569,10 +569,8 @@ namespace Ace
             // Check if the move is legal according to rules
             if (check && !this.IsLegal(card)) return false;
 
-            // Determine lead suit for this trick
+            // Determine lead suit and index
             Suit lead = this.FirstLead(card);
-
-            // Compute bitmask for played card
             ulong bit = 1ul << card.Index();
 
             // Save the snapshot of game state
@@ -621,10 +619,8 @@ namespace Ace
             // Get the current leader's known hand mask
             ulong hand = this._hands[(int)this._leader];
 
-            // Get cards still available to play
-            ulong unplayed = ~this.AllPlayed();
-
             // Collect candidates for this player
+            ulong unplayed = ~this.AllPlayed();
             ulong available = unplayed & hand;
 
             // Add possible cards from hidden pool
@@ -634,10 +630,8 @@ namespace Ace
             // Does the leader have any cards of the lead suit?
             bool has_lead = (hand & this.SuitMask(lead)) != 0;
 
-            // Determine if the player must follow the suit led
+            // Restrict cards to the led suit if must follow
             bool must_follow = this._trick.Any() && has_lead;
-
-            // If must follow suit, restrict cards to that suit
             if (must_follow) available &= this.SuitMask(lead);
 
             while (available != 0)
@@ -695,16 +689,12 @@ namespace Ace
             bool has_lead = (hand & this.SuitMask(lead)) != 0;
             if (has_lead && card.Suit != lead) return false;
 
-            // Does the leader actually hold this card?
+            // Check whether this card remains unseen
+            bool hidden = (this._hidden & bit) != 0;
             bool has_card = (hand & bit) != 0;
 
-            // Is the card present in the hidden pool?
-            bool hidden = (this._hidden & bit) != 0;
-
-            // Check if player has exhausted all hidden cards 
+            // Card must be present or come from hidden pool
             bool lefts = this._lefts[(int)this._leader] > 0;
-
-            // Card must be in the hand or be in a hidden pool
             if (!has_card && (!hidden || !lefts)) return false;
 
             // Return if the exact card was already played
@@ -759,6 +749,7 @@ namespace Ace
             // Signal a state change for engine
             this.MovePlayed?.Invoke(Card.None);
 
+            // Save state and restore old one
             this._redo.Push(new History(this));
             return this._undo.Pop().ApplyTo(this);
         }
@@ -775,6 +766,7 @@ namespace Ace
             // Signal a state change for engine
             this.MovePlayed?.Invoke(Card.None);
 
+            // Save state and restore next one
             this._undo.Push(new History(this));
             return this._redo.Pop().ApplyTo(this);
         }

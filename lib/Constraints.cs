@@ -85,7 +85,7 @@ namespace Ace
         private readonly Dictionary<Player, Constraints> _map;
 
         /// <summary>
-        /// Creates a new <see cref="ConstraintSet"/> with default constraints for each player.
+        /// Creates a new <see cref="ConstraintSet"/> with default values for each player.
         /// </summary>
         public ConstraintSet()
         {
@@ -107,7 +107,7 @@ namespace Ace
         }
 
         /// <summary>
-        /// Returns an empty <see cref="ConstraintSet"/> (with default constraints for all players).
+        /// Returns an empty <see cref="ConstraintSet"/> (default values for all players).
         /// </summary>
         /// <returns>A new, unconstrained <see cref="ConstraintSet"/> instance.</returns>
         public static ConstraintSet Empty

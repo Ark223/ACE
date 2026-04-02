@@ -269,11 +269,8 @@ namespace Ace
             // Boost score if simulations show consistent success
             if (winrate > 1d - 1e-9) return 1d + weight * tricks;
 
-            // Penalize score for unsuccessful outcomes
-            if (winrate < 1e-9) return weight * tricks;
-
-            // Standard value
-            return winrate;
+            // Penalize score for clearly unsuccessful outcomes
+            return winrate < 1e-9 ? weight * tricks : winrate;
         }
 
         /// <summary>

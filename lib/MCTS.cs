@@ -96,14 +96,14 @@ namespace Ace
                 // Only cards in the same suit matter
                 if (card.Suit != best.Suit) continue;
 
-                // Keep moves between best move and upper blocker
+                // Keep moves between top one and upper blocker
                 if (card.Rank > best.Rank && card.Rank < upper)
                 {
                     aliases.Add(card);
                     continue;
                 }
 
-                // Keep moves between lower blocker and best move
+                // Keep moves between lower blocker and top one
                 if (card.Rank < best.Rank && card.Rank > lower)
                 {
                     aliases.Add(card);
@@ -180,7 +180,6 @@ namespace Ace
             // Update all equivalent siblings
             foreach (Card alias in aliases)
             {
-                // Look up the sibling node from the same parent
                 if (node.Parent.TryGet(alias, out Node sibling))
                 {
                     sibling.Insert(outcome.IsWin, outcome.Tricks);
@@ -251,11 +250,9 @@ namespace Ace
                 var result = results[action].Normalize(child.Side);
                 child.Insert(result.IsWin, result.Tricks);
 
-                // Record one visit
-                child.AddVisit();
-
                 // Keep the best outcome
                 best.Maximize(result);
+                child.AddVisit();
             }
             return best;
         }

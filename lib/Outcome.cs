@@ -1,4 +1,5 @@
-﻿using static Ace.Extensions;
+﻿using System;
+using static Ace.Extensions;
 
 namespace Ace
 {
@@ -13,7 +14,7 @@ namespace Ace
         internal bool IsWin { get; private set; }
 
         /// <summary>
-        /// Gets the number of tricks available to the player.
+        /// Gets the number of tricks above or below the target.
         /// </summary>
         internal int Tricks { get; private set; }
 
@@ -41,7 +42,7 @@ namespace Ace
         private Outcome Flip()
         {
             Side side = (Side)(1 ^ (int)this.Side);
-            return new Outcome(!this.IsWin, 13 - this.Tricks, side);
+            return new Outcome(!this.IsWin, -this.Tricks, side);
         }
 
         /// <summary>
@@ -52,7 +53,7 @@ namespace Ace
         {
             this.Side = other.Side;
             if (other.IsWin) this.IsWin = true;
-            if (other.Tricks > this.Tricks) this.Tricks = other.Tricks;
+            this.Tricks = Math.Max(this.Tricks, other.Tricks);
         }
 
         /// <summary>

@@ -91,7 +91,7 @@ namespace Ace
             if (!SuitFromChar.TryGetValue(ca, out var suit))
                 return false;
 
-            // Same for the rank — reject if unable to parse
+            // Same for the rank - reject if unable to parse
             if (!RankFromChar.TryGetValue(cb, out var rank))
                 return false;
 

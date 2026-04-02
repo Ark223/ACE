@@ -17,7 +17,7 @@ namespace Ace
         /// </summary>
         /// <remarks>
         /// Higher values encourage more exploration of less-visited nodes,<br>
-        /// </br>while lower values favor exploitation of the best-known nodes.
+        /// </br>while lower values favor exploitation of likely promising nodes.
         /// </remarks>
         public double Exploration { get; set; } = 0.6061d;
 
@@ -25,8 +25,8 @@ namespace Ace
         /// Controls whether the search is restricted by trick boundaries.
         /// </summary>
         /// <remarks>
-        /// When enabled, the search tree grows within the ongoing trick<br>
-        /// </br>and may continue into the next trick if depth extends that far,<br>
+        /// When enabled, the search tree grows within the ongoing trick<br></br>
+        /// and may continue into the next trick if depth extends that far,<br>
         /// </br>while when disabled the tree expands until depth is exhausted.
         /// </remarks>
         public bool Limiter { get; set; } = false;
