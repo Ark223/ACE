@@ -131,8 +131,9 @@ However, scores can go outside this range:
 - Values <b>below 0</b> suggest that the side is guaranteed to fail its objective.
 - Values <b>above 1</b> indicate an almost certain success for the side.
 
-These extended scores help differentiate between borderline and extreme outcomes.  
-The choice of evaluation models is discussed further in the next section of this documentation.
+These extended scores encode the number of overtricks or undertricks relative to the contract.
+For example, a value of 1.2 means the contract is made with 2 overtricks, while 1.0 means just made.
+Similarly, negative values indicate undertricks, so -0.2 means the player objective fails by 2 tricks.
 
 To begin the simulations, call <code>Search</code> function, which runs asynchronously for a given duration:
 
