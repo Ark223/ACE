@@ -125,7 +125,7 @@ namespace Ace
             if (this._deal.Moves.Count == 0) return false;
 
             // Track the best node found during selection
-            (Node node, double score) best = (null, -1d);
+            (Node node, double score) best = (null, -13d);
 
             // Iterate through all legal candidates
             foreach (Card action in this._deal.Moves)
@@ -237,8 +237,8 @@ namespace Ace
             bool terminal = this._deal.Moves.Count == 0;
             if (terminal) return results[Card.None];
 
-            // Start with the worst possible result
-            Outcome best = new Outcome(false, -1, 0);
+            // Track the best outcome from its expanded nodes
+            Outcome best = new Outcome(false, int.MinValue, 0);
 
             // Apply outcomes to all legal actions
             foreach (Card action in this._deal.Moves)

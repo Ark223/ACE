@@ -109,20 +109,18 @@ namespace Ace
     public sealed partial class Engine
     {
         /// <summary>
-        /// Evaluates whether the investigated partnership can achieve their objective:<br></br>
-        /// either making the contract (declarer's side) or setting the contract (defenders).<br></br>
-        /// Also returns the number of tricks available to the leader's partnership in this state.
+        /// Evaluates legal moves in the given world state from our perspective.
         /// </summary>
-        /// <param name="world">Deal state to evaluate, representing a possible game scenario.</param>
-        /// <returns>True if this partnership can succeed, and their number of extra tricks.</returns>
+        /// <param name="world">Deal state representing one possible world.</param>
+        /// <returns>A mapping from moves to their <see cref="Outcome"/>s.</returns>
         private IReadOnlyDictionary<Card, Outcome> Evaluate(in Deal world)
         {
             // Determine leader side in world state
             int world_side = ((int)world.Leader) & 1;
 
-            // Determine side of the game contract declarer
+            // Determine side of game contract declarer
             int dec_side = ((int)this._game.Declarer) & 1;
-            bool declarer = (int)this._side == dec_side;
+            int sign = (int)this._side == dec_side ? 1 : -1;
 
             // Number of tricks needed to make a contract
             int required = 6 + this._game.Contract.Level;
@@ -148,9 +146,8 @@ namespace Ace
                 bool can_set = tricks[dec_side] < required;
 
                 // Evaluate success from our side perspective
-                int margin = (declarer ? 1 : -1) * overtricks;
-                evals[move] = new Outcome(declarer ? can_make :
-                    can_set, Math.Min(13, margin), this._side);
+                evals[move] = new Outcome(sign == 1 ? can_make
+                    : can_set, sign * overtricks, this._side);
             }
             return evals;
         }

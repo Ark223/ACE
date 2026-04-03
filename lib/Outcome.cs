@@ -4,7 +4,7 @@ using static Ace.Extensions;
 namespace Ace
 {
     /// <summary>
-    /// Represents the evaluated result of a position from given perspective.
+    /// Represents the evaluated result from a given perspective.
     /// </summary>
     internal struct Outcome
     {

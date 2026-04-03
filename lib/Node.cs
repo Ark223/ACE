@@ -224,32 +224,32 @@ namespace Ace
             // Unvisited nodes should be tried at least once
             if (visits == 0d) return double.PositiveInfinity;
 
-            // Compute probability of success
-            double winrate = this.Winrate();
-
-            // Adjust score for any extra tricks
-            double utility = this.Utility(winrate);
+            // Compute win probability including virtual loss
+            double winrate = (double)this.Winnings / visits;
 
             // Bonus encourages trying actions that are under-sampled
             double bonus = Math.Sqrt(Math.Log(this.Avails) / visits);
 
-            // Final score: exploitation + exploration term
-            return winrate + utility + exploration * bonus;
+            // Final score formula: exploitation + exploration term
+            return winrate + this.Utility() + exploration * bonus;
         }
 
         /// <summary>
         /// Returns a small bonus based on extra tricks in certain outcomes.
         /// </summary>
-        /// <param name="winrate">Estimated probability of success.</param>
         /// <param name="weight">Strength of the score adjustment.</param>
         /// <returns>A bonus from tricks when outcome is certain.</returns>
-        internal double Utility(double winrate, double weight = 0.01d)
+        internal double Utility(double weight = 0.01d)
         {
-            // Mean score: positive for overtricks, negative for undertricks
-            double bonus = weight * this.Tricks / (this.Visits + this.VLoss);
+            double visits = this.Visits;
+            if (visits == 0d) return 0d;
 
-            // Only apply bonus when the outcome is effectively certain
-            return (winrate < 1e-9 || winrate > 1d - 1e-9) ? bonus : 0d;
+            // Use completed results to estimate certainty
+            double winrate = (double)this.Winnings / visits;
+            bool certain = winrate > 0.99d || winrate < 0.01d;
+
+            // Add trick bonus only for near-certain outcomes
+            return certain ? weight * this.Tricks / visits : 0d;
         }
 
         /// <summary>
@@ -271,22 +271,6 @@ namespace Ace
 
             // Penalize score for clearly unsuccessful outcomes
             return winrate < 1e-9 ? weight * tricks : winrate;
-        }
-
-        /// <summary>
-        /// Computes the empirical win rate of this node.
-        /// </summary>
-        /// <returns>The fraction of all games won.</returns>
-        internal double Winrate()
-        {
-            // Virtual loss prevents parallel selection
-            double visits = this.Visits + this.VLoss;
-
-            // No simulation outcomes yet
-            if (visits == 0d) return 0d;
-
-            // Compute Bernoulli win probability
-            return (double)this.Winnings / visits;
         }
     }
 }
