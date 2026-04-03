@@ -235,21 +235,29 @@ namespace Ace
         }
 
         /// <summary>
-        /// Returns a small bonus based on extra tricks in certain outcomes.
+        /// Returns a bonus from extra tricks when the outcome is nearly certain.
         /// </summary>
-        /// <param name="weight">Strength of the score adjustment.</param>
-        /// <returns>A bonus from tricks when outcome is certain.</returns>
-        internal double Utility(double weight = 0.01d)
+        /// <param name="weight">Strength of the trick score adjustment.</param>
+        /// <param name="cutoff">Threshold needed to activate the bonus.</param>
+        /// <returns>A weighted trick bonus scaled by result certainty.</returns>
+        internal double Utility(double weight = 0.01d, double cutoff = 0.99d)
         {
             double visits = this.Visits;
             if (visits == 0d) return 0d;
 
-            // Use completed results to estimate certainty
+            // Use completed results to compute utility bonus
             double winrate = (double)this.Winnings / visits;
-            bool certain = winrate > 0.99d || winrate < 0.01d;
+            double bonus = weight * this.Tricks / visits;
 
-            // Add trick bonus only for near-certain outcomes
-            return certain ? weight * this.Tricks / visits : 0d;
+            // Map win rate to certainty in the [0, 1] range
+            double certainty = Math.Abs(2d * winrate - 1d);
+
+            // Require fully settled result when cutoff reaches 1
+            if (cutoff >= 1d) return certainty >= 1d ? bonus : 0d;
+
+            // Smoothly scale bonus beyond the certainty cutoff
+            double scale = (certainty - cutoff) / (1d - cutoff);
+            return bonus * Math.Max(0d, scale);
         }
 
         /// <summary>
