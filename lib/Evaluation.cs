@@ -62,10 +62,10 @@ namespace Ace
         /// </returns>
         public int CompareTo(Evaluation other)
         {
-            // Compare depth when visit counts are close
+            // Compare value when visit counts are close
             if (Math.Abs(this.Visits - other.Visits) < 2)
             {
-                return other.Depth.CompareTo(this.Depth);
+                return other.Value.CompareTo(this.Value);
             }
 
             // Otherwise prefer the most promising move
