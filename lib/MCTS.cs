@@ -48,39 +48,6 @@ namespace Ace
         }
 
         /// <summary>
-        /// Finds the nearest opposing ranks that bound aliases for the best move.
-        /// </summary>
-        /// <param name="best">Move used as the center of the alias search.</param>
-        /// <returns>The closest lower and upper ranks in the same suit.</returns>
-        private (int lower, int upper) GetBounds(in Card best)
-        {
-            int lower = 1, upper = 15;
-            for (int seat = 0; seat < 4; seat++)
-            {
-                // Consider cards from other players' hands
-                if (seat == (int)this._deal.Leader) continue;
-                foreach (Card card in this._deal.Hands[seat])
-                {
-                    // Only cards in the same suit matter
-                    if (card.Suit != best.Suit) continue;
-
-                    // Track the closest blockers
-                    if (card.Rank > best.Rank)
-                    {
-                        // Higher cards stop aliases above
-                        upper = Math.Min(upper, card.Rank);
-                    }
-                    else if (card.Rank < best.Rank)
-                    {
-                        // Lower cards stop aliases below
-                        lower = Math.Max(lower, card.Rank);
-                    }
-                }
-            }
-            return (lower, upper);
-        }
-
-        /// <summary>
         /// Finds legal moves in the same suit between the cards from other hands.
         /// </summary>
         /// <param name="best">Move used as the center of the alias search.</param>
@@ -110,6 +77,49 @@ namespace Ace
                 }
             }
             return aliases;
+        }
+
+        /// <summary>
+        /// Finds the nearest opposing ranks that bound aliases for the best move.
+        /// </summary>
+        /// <param name="best">Move used as the center of the alias search.</param>
+        /// <returns>The closest lower and upper ranks in the same suit.</returns>
+        private (int lower, int upper) GetBounds(Card best)
+        {
+            int lower = 1, upper = 15;
+            void process(Card card)
+            {
+                // Ignore blanks and other suits
+                if (card.Equals(Card.None)) return;
+                if (card.Suit != best.Suit) return;
+
+                // Track the closest blockers
+                if (card.Rank > best.Rank)
+                {
+                    // Higher cards stop aliases above
+                    upper = Math.Min(upper, card.Rank);
+                }
+                else if (card.Rank < best.Rank)
+                {
+                    // Lower cards stop aliases below
+                    lower = Math.Max(lower, card.Rank);
+                }
+            }
+            for (int idx = 0; idx < 4; idx++)
+            {
+                // Include cards from current trick
+                process(this._deal.Trick.Cards[idx]);
+
+                // Skip leader since his moves are candidates
+                if (idx == (int)this._deal.Leader) continue;
+
+                // Consider cards still held by other players
+                foreach (Card card in this._deal.Hands[idx])
+                {
+                    process(card);
+                }
+            }
+            return (lower, upper);
         }
 
         /// <summary>
@@ -250,9 +260,12 @@ namespace Ace
                 var result = results[action].Normalize(child.Side);
                 child.Insert(result.IsWin, result.Tricks);
 
+                // Record visit and parent depth
+                child.SetDepth(this._node.Level);
+                child.AddVisit();
+
                 // Keep the best outcome
                 best.Maximize(result);
-                child.AddVisit();
             }
             return best;
         }
