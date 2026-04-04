@@ -6,10 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>x64</Platforms>
-    <Version>1.0.2</Version>
-    <FileVersion>1.0.2</FileVersion>
-    <AssemblyVersion>1.0.2</AssemblyVersion>
-    <InformationalVersion>1.0.2</InformationalVersion>
+    <Version>1.0.3</Version>
+    <FileVersion>1.0.3</FileVersion>
+    <AssemblyVersion>1.0.3</AssemblyVersion>
+    <InformationalVersion>1.0.3</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
