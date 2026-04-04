@@ -6,22 +6,22 @@ namespace Ace
     /// <summary>
     /// Represents a state of the current trick.
     /// </summary>
-    public struct Trick
+    public sealed class Trick
     {
         /// <summary>
         /// Cards currently played to the trick.
         /// </summary>
-        public Card[] Cards;
+        public Card[] Cards { get; }
 
         /// <summary>
         /// Player who led (started) this trick.
         /// </summary>
-        public Player Leader;
+        public Player Leader { get; }
 
         /// <summary>
         /// Number of cards played so far (0 to 3).
         /// </summary>
-        public byte Count;
+        public byte Count { get; private set; }
 
         /// <summary>
         /// Initializes a new <see cref="Trick"/> with the specified leader.

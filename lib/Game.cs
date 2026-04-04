@@ -120,28 +120,80 @@ namespace Ace
     /// </summary>
     public sealed partial class Game : IGame, IDisposable
     {
-        private ulong[] _hands;
-        private ulong[] _plays;
-        private byte[] _lefts;
-        private byte[] _taken;
+        /// <summary>
+        /// Gets the bitmasks representing all cards held by each player.
+        /// </summary>
+        internal ulong[] Hands { get; private set; }
 
-        private ulong _hidden;
-        private ushort _voids;
-        private Player _leader;
-        private Trick _trick;
+        /// <summary>
+        /// Gets the bitmasks representing all cards played by each player.
+        /// </summary>
+        internal ulong[] Plays { get; private set; }
 
-        private Stack<History> _undo;
-        private Stack<History> _redo;
+        /// <summary>
+        /// Gets the count of unknown cards remaining in each player's hand.
+        /// </summary>
+        internal byte[] Lefts { get; private set; }
 
-        private readonly Player _dummy;
-        private readonly Player _declarer;
-        private readonly Contract _contract;
-        private readonly ConstraintSet _constraints;
+        /// <summary>
+        /// Gets the number of tricks taken so far by each partnership.
+        /// </summary>
+        internal byte[] Tricks { get; private set; }
+
+        /// <summary>
+        /// Gets the bitmask representing all cards not known to be in any hand.
+        /// </summary>
+        internal ulong Hidden { get; private set; }
+
+        /// <summary>
+        /// Gets the bitmask indicating, for each player, which suits are void.
+        /// </summary>
+        internal ushort Voids { get; private set; }
+
+        /// <summary>
+        /// Gets the current trick state, including played cards.
+        /// </summary>
+        public Trick Trick { get; private set; }
+
+        /// <summary>
+        /// Gets the player currently on lead and next to act.
+        /// </summary>
+        public Player Leader { get; private set; }
+
+        /// <summary>
+        /// Gets the declarer for the current contract.
+        /// </summary>
+        public Player Declarer { get; }
+
+        /// <summary>
+        /// Gets the declarer's partner, who acts as dummy.
+        /// </summary>
+        public Player Dummy { get; }
+
+        /// <summary>
+        /// Gets the contract being played in the current game.
+        /// </summary>
+        public Contract Contract { get; }
+
+        /// <summary>
+        /// Gets the per-player constraint set used for filtering deals.
+        /// </summary>
+        public ConstraintSet Constraints { get; }
 
         /// <summary>
         /// Event fired when a move has been successfully played.
         /// </summary>
         public event Action<Card> MovePlayed;
+
+        /// <summary>
+        /// Stores previous game states for undo operations.
+        /// </summary>
+        private Stack<History> UndoStack { get; set; }
+
+        /// <summary>
+        /// Stores reverted game states for redo operations.
+        /// </summary>
+        private Stack<History> RedoStack { get; set; }
 
         /// <summary>
         /// Represents a snapshot of game state for undo/redo.
@@ -163,14 +215,14 @@ namespace Ace
             /// <param name="game">Game instance to capture state from.</param>
             internal History(in Game game)
             {
-                this.Player = game._leader;
-                this.Trick = game._trick.Copy();
-                this.Hands = game._hands.ToArray();
-                this.Plays = game._plays.ToArray();
-                this.Lefts = game._lefts.ToArray();
-                this.Taken = game._taken.ToArray();
-                this.Hidden = game._hidden;
-                this.Voids = game._voids;
+                this.Player = game.Leader;
+                this.Trick = game.Trick.Copy();
+                this.Hands = game.Hands.ToArray();
+                this.Plays = game.Plays.ToArray();
+                this.Lefts = game.Lefts.ToArray();
+                this.Taken = game.Tricks.ToArray();
+                this.Hidden = game.Hidden;
+                this.Voids = game.Voids;
             }
 
             /// <summary>
@@ -180,80 +232,17 @@ namespace Ace
             /// <returns>Always true after applying the stored state.</returns>
             internal bool ApplyTo(in Game game)
             {
-                game._leader = this.Player;
-                game._trick = this.Trick.Copy();
-                game._hands = this.Hands.ToArray();
-                game._plays = this.Plays.ToArray();
-                game._lefts = this.Lefts.ToArray();
-                game._taken = this.Taken.ToArray();
-                game._hidden = this.Hidden;
-                game._voids = this.Voids;
+                game.Leader = this.Player;
+                game.Trick = this.Trick.Copy();
+                game.Hands = this.Hands.ToArray();
+                game.Plays = this.Plays.ToArray();
+                game.Lefts = this.Lefts.ToArray();
+                game.Tricks = this.Taken.ToArray();
+                game.Hidden = this.Hidden;
+                game.Voids = this.Voids;
                 return true;
             }
         }
-    }
-
-    public sealed partial class Game : IGame, IDisposable
-    {
-        /// <summary>
-        /// Gets the bitmasks representing all cards held by each player.
-        /// </summary>
-        internal ulong[] Hands => this._hands;
-
-        /// <summary>
-        /// Gets the bitmasks representing all cards played by each player.
-        /// </summary>
-        internal ulong[] Plays => this._plays;
-
-        /// <summary>
-        /// Gets the count of unknown cards remaining in each player's hand.
-        /// </summary>
-        internal byte[] Lefts => this._lefts;
-
-        /// <summary>
-        /// Gets the bitmask representing all cards not known to be in any hand.
-        /// </summary>
-        internal ulong Hidden => this._hidden;
-
-        /// <summary>
-        /// Gets the bitmask indicating, for each player, which suits are void.
-        /// </summary>
-        internal ushort Voids => this._voids;
-
-        /// <summary>
-        /// Gets the partner of the declarer.
-        /// </summary>
-        public Player Dummy => this._dummy;
-
-        /// <summary>
-        /// Gets the player currently on lead.
-        /// </summary>
-        public Player Leader => this._leader;
-
-        /// <summary>
-        /// Gets the declarer for the current contract.
-        /// </summary>
-        public Player Declarer => this._declarer;
-
-        /// <summary>
-        /// Gets the current trick state.
-        /// </summary>
-        public Trick Trick => this._trick;
-
-        /// <summary>
-        /// Gets the number of tricks taken by each pair.
-        /// </summary>
-        internal byte[] Tricks => this._taken;
-
-        /// <summary>
-        /// Gets the current contract for the game.
-        /// </summary>
-        public Contract Contract => this._contract;
-
-        /// <summary>
-        /// Gets the per-player constraint set used for filtering deals.
-        /// </summary>
-        public ConstraintSet Constraints => this._constraints;
     }
 
     public sealed partial class Game : IGame, IDisposable
@@ -275,7 +264,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ulong AllHeld()
         {
-            return this._hands[0] | this._hands[1] | this._hands[2] | this._hands[3];
+            return this.Hands[0] | this.Hands[1] | this.Hands[2] | this.Hands[3];
         }
 
         /// <summary>
@@ -287,7 +276,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ulong AllPlayed()
         {
-            return this._plays[0] | this._plays[1] | this._plays[2] | this._plays[3];
+            return this.Plays[0] | this.Plays[1] | this.Plays[2] | this.Plays[3];
         }
 
         /// <summary>
@@ -313,7 +302,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool HasVoid(Suit suit, Player player)
         {
-            return ((this._voids >> (((int)player << 2) | (int)suit)) & 1) != 0;
+            return ((this.Voids >> (((int)player << 2) | (int)suit)) & 1) != 0;
         }
 
         /// <summary>
@@ -326,7 +315,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool HasVoid(Suit suit)
         {
-            return this.HasVoid(suit, this._leader);
+            return this.HasVoid(suit, this.Leader);
         }
 
         /// <summary>
@@ -337,7 +326,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetVoid(Suit suit)
         {
-            this._voids |= (ushort)(1 << (((int)this._leader << 2) | (int)suit));
+            this.Voids |= (ushort)(1 << (((int)this.Leader << 2) | (int)suit));
         }
 
         /// <summary>
@@ -360,7 +349,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Suit FirstLead()
         {
-            return this._trick.Any() ? this._trick.Cards[0].Suit : Suit.NoTrump;
+            return this.Trick.Any() ? this.Trick.Cards[0].Suit : Suit.NoTrump;
         }
 
         /// <summary>
@@ -371,7 +360,7 @@ namespace Ace
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Suit FirstLead(in Card card)
         {
-            return this._trick.Any() ? this._trick.Cards[0].Suit : card.Suit;
+            return this.Trick.Any() ? this.Trick.Cards[0].Suit : card.Suit;
         }
 
         /// <summary>
@@ -384,7 +373,7 @@ namespace Ace
         private byte[] FindLefts()
         {
             return Array.ConvertAll(new int[] { 0, 1, 2, 3 }, seat =>
-                (byte)(13 - Utilities.PopCount(this._hands[seat])));
+                (byte)(13 - Utilities.PopCount(this.Hands[seat])));
         }
 
         /// <summary>
@@ -415,12 +404,12 @@ namespace Ace
             this.SetVoid(suit);
 
             // Compute bitmask of hidden cards of that suit
-            ulong hidden = this._hidden & this.SuitMask(suit);
+            ulong hidden = this.Hidden & this.SuitMask(suit);
             if (hidden == 0ul) return;
 
             // Find the non-leading player with any unknown cards
             var targets = Enumerable.Range(0, 4).Where<int>(seat =>
-                seat != (int)this._leader && this._lefts[seat] > 0);
+                seat != (int)this.Leader && this.Lefts[seat] > 0);
 
             // Only proceed if exactly one candidate remains
             int target = targets.DefaultIfEmpty(-1).First();
@@ -428,13 +417,13 @@ namespace Ace
 
             // Count the number of the hidden cards
             byte count = Utilities.PopCount(hidden);
-            byte current = this._lefts[target];
+            byte current = this.Lefts[target];
             count = Math.Min(count, current);
 
             // Assign hidden cards to target
-            this._hands[target] |= hidden;
-            this._lefts[target] -= count;
-            this._hidden &= ~hidden;
+            this.Hands[target] |= hidden;
+            this.Lefts[target] -= count;
+            this.Hidden &= ~hidden;
         }
 
         /// <summary>
@@ -442,14 +431,14 @@ namespace Ace
         /// </summary>
         private void FinishTrick()
         {
-            Player leader = this._trick.Leader;
-            Suit trump = this._contract.Strain;
-            Suit lead = this._trick.Cards[0].Suit;
+            Player leader = this.Trick.Leader;
+            Suit trump = this.Contract.Strain;
+            Suit lead = this.Trick.Cards[0].Suit;
 
             // Find the index of the winning card for this trick
             var winner = Enumerable.Range(0, 4).OrderBy(index =>
             {
-                ref Card card = ref this._trick.Cards[index];
+                ref Card card = ref this.Trick.Cards[index];
                 int priority = -this.Priority(card, trump, lead);
                 return (Priority: priority, CardRank: -card.Rank);
             });
@@ -458,11 +447,11 @@ namespace Ace
             var player = leader.Advance(winner.First());
 
             // Update trick counts for pairs
-            this._taken[((int)player) & 1]++;
+            this.Tricks[((int)player) & 1]++;
 
             // Update and prepare next trick
-            this._trick = new Trick(player);
-            this._leader = player;
+            this.Trick = new Trick(player);
+            this.Leader = player;
         }
 
         /// <summary>
@@ -473,10 +462,10 @@ namespace Ace
         public IEnumerable<string> FormatHand(Player player)
         {
             // Get the player's known hand mask
-            ulong hand = this._hands[(int)player];
+            ulong hand = this.Hands[(int)player];
 
             // Check if player has still hidden cards
-            bool lefts = this._lefts[(int)player] > 0;
+            bool lefts = this.Lefts[(int)player] > 0;
 
             // Loop through each suit in PBN order
             char[] suits = { 'C', 'D', 'H', 'S' };
@@ -497,9 +486,12 @@ namespace Ace
                         builder.Append(Card.RankToChar[rank]);
                 }
 
-                // Add "?" if some cards are still hidden
-                bool hidden = (this._hidden & mask) != 0;
-                if (hidden && lefts) builder.Append('?');
+                // Check hidden cards and player's void status
+                bool voids = this.HasVoid((Suit)suit, player);
+                bool hidden = (this.Hidden & mask) != 0;
+
+                // Add "?" if the player may still hold hidden cards
+                if (hidden && lefts && !voids) builder.Append('?');
 
                 // Add "-" if the player is void in this suit
                 if (builder.Length == 2) builder.Append('-');
@@ -518,22 +510,22 @@ namespace Ace
         /// <param name="options">Game options, including deal and contract.</param>
         public Game(GameOptions options)
         {
-            this._declarer = options.Declarer;
-            this._leader = this._declarer.Next();
-            this._dummy = this._leader.Next();
+            this.Declarer = options.Declarer;
+            this.Leader = this.Declarer.Next();
+            this.Dummy = this.Leader.Next();
 
-            this._contract = options.Contract;
-            this._constraints = options.Constraints;
-            this._hands = PBN.ParseDeal(options.Deal);
-            this._trick = new Trick(this._leader);
+            this.Contract = options.Contract;
+            this.Constraints = options.Constraints;
+            this.Hands = PBN.ParseDeal(options.Deal);
+            this.Trick = new Trick(this.Leader);
 
-            this._undo = new Stack<History>();
-            this._redo = new Stack<History>();
+            this.UndoStack = new Stack<History>();
+            this.RedoStack = new Stack<History>();
 
-            this._hidden = this.HiddenSet();
-            this._lefts = this.FindLefts();
-            this._plays = new ulong[4];
-            this._taken = new byte[2];
+            this.Hidden = this.HiddenSet();
+            this.Lefts = this.FindLefts();
+            this.Plays = new ulong[4];
+            this.Tricks = new byte[2];
         }
 
         /// <summary>
@@ -573,32 +565,32 @@ namespace Ace
             Suit lead = this.FirstLead(card);
             ulong bit = 1ul << card.Index();
 
-            // Save the snapshot of game state
-            this._undo.Push(new History(this));
-            this._redo.Clear();
+            // Save the snapshot of the game state
+            this.UndoStack.Push(new History(this));
+            this.RedoStack.Clear();
 
             // Record a void if did not follow the suit
             if (card.Suit != lead) this.ApplyVoid(lead);
 
-            // Remove hidden card and consume an unknown slot
-            if ((this._hands[(int)this._leader] & bit) == 0)
+            // Remove hidden card and consume unknown slot
+            if ((this.Hands[(int)this.Leader] & bit) == 0)
             {
-                this._hidden &= ~bit;
-                this._lefts[(int)this._leader]--;
+                this.Hidden &= ~bit;
+                this.Lefts[(int)this.Leader]--;
             }
 
             // Remove card from the player's hand
-            this._hands[(int)this._leader] &= ~bit;
+            this.Hands[(int)this.Leader] &= ~bit;
 
-            // Record new play and update the trick
-            this._plays[(int)this._leader] |= bit;
-            this._trick.Insert(card);
+            // Record new play and update trick
+            this.Plays[(int)this.Leader] |= bit;
+            this.Trick.Insert(card);
 
             // Finish the trick if 4 cards have been played
-            if (this._trick.Count == 4) this.FinishTrick();
+            if (this.Trick.Count == 4) this.FinishTrick();
 
             // Otherwise, pass lead to the next player
-            else this._leader = this._leader.Next();
+            else this.Leader = this.Leader.Next();
 
             // Notify that a move was played
             this.MovePlayed?.Invoke(card);
@@ -617,21 +609,21 @@ namespace Ace
             Suit lead = this.FirstLead();
 
             // Get the current leader's known hand mask
-            ulong hand = this._hands[(int)this._leader];
+            ulong hand = this.Hands[(int)this.Leader];
 
             // Collect candidates for this player
             ulong unplayed = ~this.AllPlayed();
             ulong available = unplayed & hand;
 
             // Add possible cards from hidden pool
-            if (this._lefts[(int)this._leader] > 0)
-                available |= unplayed & this._hidden;
+            if (this.Lefts[(int)this.Leader] > 0)
+                available |= unplayed & this.Hidden;
 
             // Does the leader have any cards of the lead suit?
             bool has_lead = (hand & this.SuitMask(lead)) != 0;
 
             // Restrict cards to the led suit if must follow
-            bool must_follow = this._trick.Any() && has_lead;
+            bool must_follow = this.Trick.Any() && has_lead;
             if (must_follow) available &= this.SuitMask(lead);
 
             while (available != 0)
@@ -658,7 +650,7 @@ namespace Ace
         /// <returns>Tricks taken by the player's partnership.</returns>
         public int GetTricks(Player player)
         {
-            return this._taken[((int)player) & 1];
+            return this.Tricks[((int)player) & 1];
         }
 
         /// <summary>
@@ -683,18 +675,18 @@ namespace Ace
             Suit lead = this.FirstLead(card);
 
             // Get the current leader's known hand mask
-            ulong hand = this._hands[(int)this._leader];
+            ulong hand = this.Hands[(int)this.Leader];
 
             // Can't discard off-suit if still has the suit led
             bool has_lead = (hand & this.SuitMask(lead)) != 0;
             if (has_lead && card.Suit != lead) return false;
 
-            // Check whether this card remains unseen
-            bool hidden = (this._hidden & bit) != 0;
+            // Check whether card remains unseen
+            bool hidden = (this.Hidden & bit) != 0;
             bool has_card = (hand & bit) != 0;
 
-            // Card must be present or come from hidden pool
-            bool lefts = this._lefts[(int)this._leader] > 0;
+            // Card must be held or come from hidden pool
+            bool lefts = this.Lefts[(int)this.Leader] > 0;
             if (!has_card && (!hidden || !lefts)) return false;
 
             // Return if the exact card was already played
@@ -710,7 +702,7 @@ namespace Ace
         /// <returns>True if the game is finished; otherwise, false.</returns>
         public bool IsOver()
         {
-            return (this._taken[0] + this._taken[1]) >= 13;
+            return (this.Tricks[0] + this.Tricks[1]) >= 13;
         }
 
         /// <summary>
@@ -721,9 +713,9 @@ namespace Ace
         public bool SetDummy(string hand)
         {
             // Must be right after opening lead
-            if (this._taken[0] != 0) return false;
-            if (this._taken[1] != 0) return false;
-            if (this._trick.Count != 1) return false;
+            if (this.Tricks[0] != 0) return false;
+            if (this.Tricks[1] != 0) return false;
+            if (this.Trick.Count != 1) return false;
 
             // Must contain exactly 13 cards
             ulong dummy = PBN.ParseHand(hand);
@@ -731,9 +723,9 @@ namespace Ace
             if (count != 13) return false;
 
             // Assign cards by updating bitmasks
-            this._hands[(int)this._dummy] = dummy;
-            this._lefts[(int)this._dummy] = 0;
-            this._hidden &= ~dummy;
+            this.Hands[(int)this.Dummy] = dummy;
+            this.Lefts[(int)this.Dummy] = 0;
+            this.Hidden &= ~dummy;
             return true;
         }
 
@@ -743,15 +735,15 @@ namespace Ace
         /// <returns>True if an action was performed; otherwise, false.</returns>
         public bool Undo()
         {
-            // Cannot undo; no previous moves
-            if (!this._undo.Any()) return false;
+            // Cannot undo as missing previous moves
+            if (!this.UndoStack.Any()) return false;
 
             // Signal a state change for engine
             this.MovePlayed?.Invoke(Card.None);
 
-            // Save state and restore old one
-            this._redo.Push(new History(this));
-            return this._undo.Pop().ApplyTo(this);
+            // Save state and restore previous one
+            this.RedoStack.Push(new History(this));
+            return this.UndoStack.Pop().ApplyTo(this);
         }
 
         /// <summary>
@@ -760,15 +752,15 @@ namespace Ace
         /// <returns>True if an action was performed; otherwise, false.</returns>
         public bool Redo()
         {
-            // Cannot redo; no further moves
-            if (!this._redo.Any()) return false;
+            // Cannot redo as missing further moves
+            if (!this.RedoStack.Any()) return false;
 
             // Signal a state change for engine
             this.MovePlayed?.Invoke(Card.None);
 
-            // Save state and restore next one
-            this._undo.Push(new History(this));
-            return this._redo.Pop().ApplyTo(this);
+            // Save state and restore the next one
+            this.UndoStack.Push(new History(this));
+            return this.RedoStack.Pop().ApplyTo(this);
         }
 
         /// <summary>
@@ -780,16 +772,19 @@ namespace Ace
             // Shallow copy the game state instance
             var copy = (Game)this.MemberwiseClone();
 
-            // Deep copy cards and game stats
-            copy._trick = this._trick.Copy();
-            copy._hands = this._hands.ToArray();
-            copy._plays = this._plays.ToArray();
-            copy._lefts = this._lefts.ToArray();
-            copy._taken = this._taken.ToArray();
+            // Deep copy the core properties
+            copy.Trick = this.Trick.Copy();
+            copy.Hands = this.Hands.ToArray();
+            copy.Plays = this.Plays.ToArray();
+            copy.Lefts = this.Lefts.ToArray();
+            copy.Tricks = this.Tricks.ToArray();
 
-            // Clone history stacks while preserving LIFO order
-            copy._undo = new Stack<History>(this._undo.Reverse());
-            copy._redo = new Stack<History>(this._redo.Reverse());
+            var undo = this.UndoStack.Reverse();
+            var redo = this.RedoStack.Reverse();
+
+            // Clone stacks while preserving LIFO order
+            copy.UndoStack = new Stack<History>(undo);
+            copy.RedoStack = new Stack<History>(redo);
             return copy;
         }
 
@@ -819,8 +814,8 @@ namespace Ace
             var west = hands[3].Select(x => x.PadRight(width)).ToArray();
 
             // Prepare prefixes for each pair's trick counts
-            string ns_prefix = $" NS: {this._taken[0],-3} ";
-            string ew_prefix = $" EW: {this._taken[1],-3} ";
+            string ns_prefix = $" NS: {this.Tricks[0],-3} ";
+            string ew_prefix = $" EW: {this.Tricks[1],-3} ";
 
             // Insert trick counts into North's hand block
             string[] block = new string[4]
@@ -830,17 +825,17 @@ namespace Ace
             };
 
             // West lead affects placeholder alignment
-            bool west_side = this._leader == Player.West;
+            bool west_side = this.Leader == Player.West;
 
             // Prepare card display from the current trick
             var trick = Enumerable.Repeat("  ", 4).ToArray();
-            trick[(int)this._leader] = west_side ? "? " : " ?";
+            trick[(int)this.Leader] = west_side ? "? " : " ?";
 
             // Fill seats with played cards and leading side
-            for (int idx = 0; idx < this._trick.Count; ++idx)
+            for (int idx = 0; idx < this.Trick.Count; ++idx)
             {
-                Player player = this._trick.Leader.Advance(idx);
-                trick[(int)player] = $"{this._trick.Cards[idx]}";
+                Player player = this.Trick.Leader.Advance(idx);
+                trick[(int)player] = $"{this.Trick.Cards[idx]}";
             }
 
             // Build the full table view line by line
@@ -887,8 +882,8 @@ namespace Ace
         /// </summary>
         private void Release()
         {
-            this._undo.Clear();
-            this._redo.Clear();
+            this.UndoStack.Clear();
+            this.RedoStack.Clear();
         }
 
         /// <summary>
