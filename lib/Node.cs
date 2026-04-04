@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using static Ace.Extensions;
@@ -9,17 +8,18 @@ namespace Ace
     /// <summary>
     /// Maps each card to its corresponding child node in the tree.
     /// </summary>
-    using Children = ConcurrentDictionary<Card, Node>;
+    using Children = Dictionary<Card, Node>;
 
     /// <summary>
     /// Represents a node in the tree, storing statistics and its children.
     /// </summary>
     internal sealed partial class Node
     {
-        private int _wins = 0;
         private int _depth = 0;
         private int _level = 0;
         private int _vloss = 0;
+
+        private int _wins = 0;
         private int _visits = 0;
         private long _avails = 1u;
         private long _tricks = 0u;
@@ -27,6 +27,7 @@ namespace Ace
         private Node _parent = null;
         private readonly Side _side;
         private readonly Card _action;
+        private readonly object _lock;
         private readonly Children _children;
 
         /// <summary>
@@ -91,6 +92,7 @@ namespace Ace
         {
             this._side = default;
             this._action = default;
+            this._lock = new object();
             this._children = new Children();
         }
 
@@ -105,6 +107,8 @@ namespace Ace
             this._side = side;
             this._action = action;
             this._parent = parent;
+
+            this._lock = new object();
             this._level = parent._level + 1;
             this._children = new Children();
         }
@@ -124,8 +128,16 @@ namespace Ace
         /// <param name="side">Partnership perspective.</param>
         internal Node AddChild(in Card action, Side side)
         {
-            Node factory(Card card) => new Node(this, card, side);
-            return this._children.GetOrAdd(action, factory);
+            lock (this._lock)
+            {
+                // Reuse existing node or create it on first expansion
+                if (!this._children.TryGetValue(action, out var node))
+                {
+                    node = new Node(this, action, side);
+                    this._children[action] = node;
+                }
+                return node;
+            }
         }
 
         /// <summary>
@@ -205,7 +217,10 @@ namespace Ace
         /// <returns>True if the child node exists; otherwise, false.</returns>
         internal bool TryGet(in Card action, out Node node)
         {
-            return this._children.TryGetValue(action, out node);
+            lock (this._lock)
+            {
+                return this._children.TryGetValue(action, out node);
+            }
         }
     }
 
